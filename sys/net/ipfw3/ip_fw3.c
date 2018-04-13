@@ -147,7 +147,7 @@ int fw3_one_pass = 1;
 static uint32_t static_count;	/* # of static rules */
 static uint32_t static_ioc_len;	/* bytes of static rules */
 static int ipfw_flushing;
-int fw_verbose = 0;
+int fw3_verbose = 0;
 static int fw_debug;
 static int autoinc_step = IPFW_AUTOINC_STEP_DEF;
 
@@ -166,7 +166,7 @@ SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO,one_pass,CTLFLAG_RW,
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, debug, CTLFLAG_RW,
 	&fw_debug, 0, "Enable printing of debug ip_fw statements");
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, verbose, CTLFLAG_RW,
-	&fw_verbose, 0, "Log matches to ipfw rules");
+	&fw3_verbose, 0, "Log matches to ipfw rules");
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, static_count, CTLFLAG_RD,
 	&static_count, 0, "Number of static rules");
 
@@ -608,7 +608,7 @@ done:
 	return cmd_val;
 
 pullup_failed:
-	if (fw_verbose)
+	if (fw3_verbose)
 		kprintf("pullup failed\n");
 	return IP_FW_DENY;
 }
@@ -1323,7 +1323,7 @@ ipfw_ctl_zero_entry(int rulenum, int log_only)
 	netisr_domsg(nmsg, 0);
 	KKASSERT(zmsg.start_rule == NULL);
 
-	if (fw_verbose)
+	if (fw3_verbose)
 		log(LOG_SECURITY | LOG_NOTICE, msg, rulenum);
 	return (0);
 }
