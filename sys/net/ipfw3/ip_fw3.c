@@ -93,7 +93,7 @@ MALLOC_DEFINE(M_IPFW3, "IPFW3", "ip_fw3 default module");
 #ifdef IPFIREWALL_DEBUG
 #define DPRINTF(fmt, ...)			\
 do { 						\
-	if (fw_debug > 0) 			\
+	if (fw3_debug > 0) 			\
 		kprintf(fmt, __VA_ARGS__); 	\
 } while (0)
 #else
@@ -142,14 +142,14 @@ ipfw_basic_delete_state_t *ipfw_basic_flush_state_prt = NULL;
 ipfw_basic_append_state_t *ipfw_basic_append_state_prt = NULL;
 
 extern int ip_fw_loaded;
-int fw3_enable = 1;
-int fw3_one_pass = 1;
-static uint32_t static_count;	/* # of static rules */
-static uint32_t static_ioc_len;	/* bytes of static rules */
-static int ipfw_flushing;
-int fw3_verbose = 0;
-static int fw_debug;
-static int autoinc_step = IPFW_AUTOINC_STEP_DEF;
+int 			fw3_enable = 1;
+int 			fw3_one_pass = 1;
+int 			fw3_verbose = 0;
+static uint32_t 	static_count;	/* # of static rules */
+static uint32_t 	static_ioc_len;	/* bytes of static rules */
+static int 		fw3_flushing;
+static int 		fw3_debug;
+static int 		autoinc_step = IPFW_AUTOINC_STEP_DEF;
 
 static int	ipfw_sysctl_enable(SYSCTL_HANDLER_ARGS);
 static int	ipfw_sysctl_autoinc_step(SYSCTL_HANDLER_ARGS);
@@ -164,7 +164,7 @@ SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO,one_pass,CTLFLAG_RW,
 	&fw3_one_pass, 0,
 	"Only do a single pass through ipfw when using dummynet(4)");
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, debug, CTLFLAG_RW,
-	&fw_debug, 0, "Enable printing of debug ip_fw statements");
+	&fw3_debug, 0, "Enable printing of debug ip_fw statements");
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, verbose, CTLFLAG_RW,
 	&fw3_verbose, 0, "Log matches to ipfw rules");
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, static_count, CTLFLAG_RD,
@@ -459,7 +459,7 @@ after_ip_checks:
 			return IP_FW_PASS;
 
 		/* This rule is being/has been flushed */
-		if (ipfw_flushing)
+		if (fw3_flushing)
 			return IP_FW_DENY;
 
 		f = args->rule->next_rule;
@@ -483,7 +483,7 @@ after_ip_checks:
 		f = ctx->ipfw_rule_chain;
 		if (args->eh == NULL && skipto != 0) {
 			/* No skipto during rule flushing */
-			if (ipfw_flushing) {
+			if (fw3_flushing) {
 				return IP_FW_DENY;
 			}
 			if (skipto >= IPFW_DEFAULT_RULE) {
@@ -495,7 +495,7 @@ after_ip_checks:
 			if (f == NULL) {	/* drop packet */
 				return IP_FW_DENY;
 			}
-		} else if (ipfw_flushing) {
+		} else if (fw3_flushing) {
 			/* Rules are being flushed; skip to default rule */
 			f = ctx->ipfw_default_rule;
 		}
@@ -898,7 +898,7 @@ ipfw_ctl_flush_rule(int kill_default)
 		 * be flushed, so it could jump directly to
 		 * the default rule.
 		 */
-		ipfw_flushing = 1;
+		fw3_flushing = 1;
 		netmsg_service_sync();
 	}
 
@@ -930,7 +930,7 @@ ipfw_ctl_flush_rule(int kill_default)
 	}
 
 	/* Flush is done */
-	ipfw_flushing = 0;
+	fw3_flushing = 0;
 }
 
 static void
