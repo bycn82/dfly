@@ -142,6 +142,8 @@ ipfw_basic_delete_state_t *ipfw_basic_flush_state_prt = NULL;
 ipfw_basic_append_state_t *ipfw_basic_append_state_prt = NULL;
 
 extern int ip_fw_loaded;
+int fw3_enable = 1;
+int fw3_one_pass = 1;
 static uint32_t static_count;	/* # of static rules */
 static uint32_t static_ioc_len;	/* bytes of static rules */
 static int ipfw_flushing;
