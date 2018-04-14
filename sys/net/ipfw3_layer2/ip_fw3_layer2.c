@@ -54,7 +54,7 @@
 
 #include "ip_fw3_layer2.h"
 
-extern struct ipfw_context      *ipfw_ctx[MAXCPU];
+extern struct ipfw3_context      *fw3_ctx[MAXCPU];
 
 void
 check_layer2(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
@@ -104,7 +104,7 @@ void
 check_mac_from_lookup(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len)
 {
-        struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+        struct ipfw3_context *ctx = fw3_ctx[mycpuid];
         struct ipfw_table_context *table_ctx;
         struct radix_node_head *rnh;
         struct table_mac_entry *ent = NULL;
@@ -148,7 +148,7 @@ void
 check_mac_to_lookup(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len)
 {
-        struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+        struct ipfw3_context *ctx = fw3_ctx[mycpuid];
         struct ipfw_table_context *table_ctx;
         struct radix_node_head *rnh;
         struct table_mac_entry *ent = NULL;

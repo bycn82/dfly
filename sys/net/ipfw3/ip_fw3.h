@@ -357,7 +357,7 @@ extern ip_fw_dn_io_t	*ip_fw_dn_io_ptr;
 #define	IPFW_TABLES_MAX		32
 
 /* root of place holding all information, per-cpu */
-struct ipfw_context {
+struct ipfw3_context {
 	struct ip_fw	*ipfw_rule_chain;		/* list of rules*/
 	struct ip_fw	*ipfw_default_rule;	 /* default rule */
 	struct ipfw_state_context *state_ctx;

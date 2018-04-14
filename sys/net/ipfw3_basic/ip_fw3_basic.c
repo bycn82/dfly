@@ -71,7 +71,7 @@
 
 #include "ip_fw3_basic.h"
 
-extern struct ipfw_context		*ipfw_ctx[MAXCPU];
+extern struct ipfw3_context		*fw3_ctx[MAXCPU];
 extern struct ipfw_sync_context 	sync_ctx;
 extern int 				sysctl_var_fw3_verbose;
 extern ipfw_basic_delete_state_t 	*ipfw_basic_flush_state_prt;
@@ -155,7 +155,7 @@ adjust_hash_size_dispatch(netmsg_t nmsg)
 {
 	struct ipfw_state_context *state_ctx;
 	struct ip_fw_state *the_state, *state;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	int i;
 
 	for (i = 0; i < state_hash_size_old; i++) {
@@ -268,7 +268,7 @@ static struct ip_fw_state *
 lookup_state(struct ip_fw_args *args, ipfw_insn *cmd, int *limited, int all)
 {
 	struct ip_fw_state *state = NULL;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_state_context *state_ctx;
 	int start, end, i, count = 0;
 
@@ -310,7 +310,7 @@ static struct ip_fw_state *
 install_state(struct ip_fw *rule, ipfw_insn *cmd, struct ip_fw_args *args)
 {
 	struct ip_fw_state *state;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_state_context *state_ctx;
 	int hash = hash_packet(&args->f_id);
 	state_ctx = &ctx->state_ctx[hash];
@@ -342,7 +342,7 @@ void
 ipfw_sync_install_state(struct cmd_send_state *cmd)
 {
         struct ip_fw_state *state;
-        struct ipfw_context *ctx = ipfw_ctx[cmd->cpu];
+        struct ipfw3_context *ctx = fw3_ctx[cmd->cpu];
         struct ipfw_state_context *state_ctx;
         struct ip_fw *rule;
 
@@ -567,7 +567,7 @@ void
 check_from_lookup(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len)
 {
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
 	struct radix_node_head *rnh;
 	struct sockaddr_in sa;
@@ -660,7 +660,7 @@ void
 check_to_lookup(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len)
 {
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
 	struct radix_node_head *rnh;
 	struct sockaddr_in sa;
@@ -868,7 +868,7 @@ static void
 ipfw_basic_add_state(struct ipfw_ioc_state *ioc_state)
 {
 	struct ip_fw_state *state;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_state_context *state_ctx;
 	state_ctx = &ctx->state_ctx[hash_packet(&(ioc_state->flow_id))];
 	state = kmalloc(sizeof(struct ip_fw_state),
@@ -912,10 +912,10 @@ ipfw_basic_flush_state(struct ip_fw *rule)
 {
 	struct ipfw_state_context *state_ctx;
 	struct ip_fw_state *state,*the_state, *prev_state;
-	struct ipfw_context *ctx;
+	struct ipfw3_context *ctx;
 	int i;
 
-	ctx = ipfw_ctx[mycpuid];
+	ctx = fw3_ctx[mycpuid];
 	for (i = 0; i < state_hash_size; i++) {
 		state_ctx = &ctx->state_ctx[i];
 		if (state_ctx != NULL) {
@@ -951,7 +951,7 @@ static void
 ipfw_cleanup_expired_state(netmsg_t nmsg)
 {
 	struct ip_fw_state *state,*the_state,*prev_state;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_state_context *state_ctx;
 	int i;
 
@@ -1103,10 +1103,10 @@ ipfw_basic_init(void)
 			O_BASIC_IP_DST_N_PORT, (filter_func)check_dst_n_port);
 
 	int cpu;
-	struct ipfw_context *ctx;
+	struct ipfw3_context *ctx;
 
 	for (cpu = 0; cpu < ncpus; cpu++) {
-		ctx = ipfw_ctx[cpu];
+		ctx = fw3_ctx[cpu];
 		if (ctx != NULL) {
 			ctx->state_ctx = kmalloc(state_hash_size *
 					sizeof(struct ipfw_state_context),
@@ -1143,13 +1143,13 @@ ipfw_basic_stop(void)
 	int cpu,i;
 	struct ipfw_state_context *state_ctx;
 	struct ip_fw_state *state,*the_state;
-	struct ipfw_context *ctx;
+	struct ipfw3_context *ctx;
 	if (ip_fw3_unregister_module(MODULE_BASIC_ID) ==0 ) {
 		ipfw_basic_flush_state_prt = NULL;
 		ipfw_basic_append_state_prt = NULL;
 
 		for (cpu = 0; cpu < ncpus; cpu++) {
-			ctx = ipfw_ctx[cpu];
+			ctx = fw3_ctx[cpu];
 			if (ctx != NULL) {
 				for (i = 0; i < state_hash_size; i++) {
 					state_ctx = &ctx->state_ctx[i];

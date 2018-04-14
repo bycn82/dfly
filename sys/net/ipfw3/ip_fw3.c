@@ -172,7 +172,7 @@ SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, static_count, CTLFLAG_RD,
 
 filter_func filter_funcs[MAX_MODULE][MAX_OPCODE_PER_MODULE];
 struct ipfw3_module fw3_modules[MAX_MODULE];
-struct ipfw_context *ipfw_ctx[MAXCPU];
+struct ipfw3_context *fw3_ctx[MAXCPU];
 struct ipfw_sync_context sync_ctx;
 static int ipfw_ctl(struct sockopt *sopt);
 
@@ -215,7 +215,7 @@ ip_fw3_unregister_module(int module_id)
 
 	found = 0;
 	tmp = fw3_modules;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	fw = ctx->ipfw_rule_chain;
 	for (; fw; fw = fw->next) {
 		for (len = fw->cmd_len, cmd = fw->cmd; len > 0;
@@ -363,7 +363,7 @@ ip_fw3_chk(struct ip_fw_args *args)
 	struct in_addr src_ip, dst_ip;		/* NOTE: network format	*/
 	uint16_t ip_len = 0;
 	uint8_t prev_module = -1, prev_opcode = -1; /* previous module & opcode */
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 
 	if (m->m_pkthdr.fw_flags & IPFW_MBUF_GENERATED)
 		return IP_FW_PASS;	/* accept */
@@ -696,7 +696,7 @@ static void
 ip_fw3_add_rule_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_ipfw *fwmsg = (struct netmsg_ipfw *)nmsg;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *rule, *prev,*next;
 	const struct ipfw_ioc_rule *ioc_rule;
 
@@ -753,7 +753,7 @@ ip_fw3_add_rule_dispatch(netmsg_t nmsg)
 static void
 ip_fw3_add_rule(struct ipfw_ioc_rule *ioc_rule)
 {
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct netmsg_ipfw fwmsg;
 	struct netmsg_base *nmsg;
 	struct ip_fw *f;
@@ -807,7 +807,7 @@ ip_fw3_add_rule(struct ipfw_ioc_rule *ioc_rule)
  * Must be called at splimp().
  */
 static struct ip_fw *
-ip_fw3_delete_rule(struct ipfw_context *ctx,
+ip_fw3_delete_rule(struct ipfw3_context *ctx,
 		 struct ip_fw *prev, struct ip_fw *rule)
 {
 	if (prev == NULL)
@@ -827,7 +827,7 @@ static void
 ip_fw3_flush_rule_dispatch(netmsg_t nmsg)
 {
 	struct lwkt_msg *lmsg = &nmsg->lmsg;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *rule, *the_rule;
 	int kill_default = lmsg->u.ms_result;
 
@@ -861,7 +861,7 @@ static void
 ip_fw3_delete_state_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *rule = ctx->ipfw_rule_chain;
 	while (rule != NULL) {
 		if (rule->rulenum == dmsg->rulenum) {
@@ -937,7 +937,7 @@ static void
 ip_fw3_delete_rule_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *rule, *prev = NULL;
 
 	rule = ctx->ipfw_rule_chain;
@@ -986,7 +986,7 @@ static void
 ip_fw3_alt_delete_ruleset_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *prev, *rule;
 #ifdef INVARIANTS
 	int del = 0;
@@ -1014,7 +1014,7 @@ static void
 ip_fw3_disable_ruleset_state_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *rule;
 #ifdef INVARIANTS
 	int cleared = 0;
@@ -1039,7 +1039,7 @@ ip_fw3_alt_delete_ruleset(uint8_t set)
 	struct netmsg_base *nmsg;
 	int state, del;
 	struct ip_fw *rule;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 
 	/*
 	 * Check whether the 'set' exists.  If it exists,
@@ -1110,7 +1110,7 @@ ip_fw3_alt_move_rule(uint16_t rulenum, uint8_t set)
 	struct netmsg_del dmsg;
 	struct netmsg_base *nmsg;
 	struct ip_fw *rule;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 
 	/*
 	 * Locate first rule to move
@@ -1140,7 +1140,7 @@ static void
 ip_fw3_alt_move_ruleset_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *rule;
 
 	for (rule = ctx->ipfw_rule_chain; rule; rule = rule->next) {
@@ -1171,7 +1171,7 @@ static void
 ip_fw3_alt_swap_ruleset_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *rule;
 
 	for (rule = ctx->ipfw_rule_chain; rule; rule = rule->next) {
@@ -1262,7 +1262,7 @@ static void
 ip_fw3_zero_entry_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_zent *zmsg = (struct netmsg_zent *)nmsg;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *rule;
 
 	if (zmsg->rulenum == 0) {
@@ -1291,7 +1291,7 @@ ip_fw3_ctl_zero_entry(int rulenum, int log_only)
 	struct netmsg_zent zmsg;
 	struct netmsg_base *nmsg;
 	const char *msg;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 
 	bzero(&zmsg, sizeof(zmsg));
 	nmsg = &zmsg.base;
@@ -1354,7 +1354,7 @@ ip_fw3_ctl_delete_state(struct sockopt *sopt)
 			return -1;
 		}
 	}
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *rule = ctx->ipfw_rule_chain;
 
 	while (rule!=NULL) {
@@ -1454,7 +1454,7 @@ ip_fw3_copy_rule(const struct ip_fw *rule, struct ipfw_ioc_rule *ioc_rule)
 	ioc_rule->rulenum = rule->rulenum;
 	ioc_rule->set = rule->set;
 
-	ioc_rule->set_disable = ipfw_ctx[mycpuid]->ipfw_set_disable;
+	ioc_rule->set_disable = fw3_ctx[mycpuid]->ipfw_set_disable;
 	ioc_rule->static_count = static_count;
 	ioc_rule->static_len = static_ioc_len;
 
@@ -1511,7 +1511,7 @@ ip_fw3_ctl_get_modules(struct sockopt *sopt)
 static int
 ip_fw3_ctl_get_rules(struct sockopt *sopt)
 {
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_state_context *state_ctx;
 	struct ip_fw *rule;
 	struct ip_fw_state *state;
@@ -1522,7 +1522,7 @@ ip_fw3_ctl_get_rules(struct sockopt *sopt)
 	size = static_ioc_len;
 	for (i = 0; i < ncpus; i++) {
 		for (j = 0; j < ctx->state_hash_size; j++) {
-			state_ctx = &ipfw_ctx[i]->state_ctx[j];
+			state_ctx = &fw3_ctx[i]->state_ctx[j];
 			state_count += state_ctx->count;
 		}
 	}
@@ -1545,7 +1545,7 @@ ip_fw3_ctl_get_rules(struct sockopt *sopt)
 	if (state_count > 0 ) {
 		for (i = 0; i < ncpus; i++) {
 			for (j = 0; j < ctx->state_hash_size; j++) {
-				state_ctx = &ipfw_ctx[i]->state_ctx[j];
+				state_ctx = &fw3_ctx[i]->state_ctx[j];
 				state = state_ctx->state;
 				while (state != NULL) {
 					bp = ip_fw3_copy_state(state, bp, i);
@@ -1561,7 +1561,7 @@ static void
 ip_fw3_set_disable_dispatch(netmsg_t nmsg)
 {
 	struct lwkt_msg *lmsg = &nmsg->lmsg;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 
 	ctx->ipfw_set_disable = lmsg->u.ms_result32;
 
@@ -1577,7 +1577,7 @@ ip_fw3_ctl_set_disable(uint32_t disable, uint32_t enable)
 
 	/* IPFW_DEFAULT_SET is always enabled */
 	enable |= (1 << IPFW_DEFAULT_SET);
-	set_disable = (ipfw_ctx[mycpuid]->ipfw_set_disable | disable) & ~enable;
+	set_disable = (fw3_ctx[mycpuid]->ipfw_set_disable | disable) & ~enable;
 
 	bzero(&nmsg, sizeof(nmsg));
 	netmsg_init(&nmsg, NULL, &curthread->td_msgport,
@@ -1966,11 +1966,11 @@ static void
 ip_fw3_ctx_init_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_ipfw *fwmsg = (struct netmsg_ipfw *)nmsg;
-	struct ipfw_context *ctx;
+	struct ipfw3_context *ctx;
 	struct ip_fw *def_rule;
 
-	ctx = kmalloc(sizeof(struct ipfw_context), M_IPFW3, M_WAITOK | M_ZERO);
-	ipfw_ctx[mycpuid] = ctx;
+	ctx = kmalloc(sizeof(struct ipfw3_context), M_IPFW3, M_WAITOK | M_ZERO);
+	fw3_ctx[mycpuid] = ctx;
 
 	def_rule = kmalloc(sizeof(struct ip_fw), M_IPFW3, M_WAITOK | M_ZERO);
 	def_rule->act_ofs = 0;
@@ -2077,9 +2077,9 @@ ip_fw3_fini_dispatch(netmsg_t nmsg)
 	table_fini();
 	/* Free pre-cpu context */
 	for (cpu = 0; cpu < ncpus; ++cpu) {
-		if (ipfw_ctx[cpu] != NULL) {
-			kfree(ipfw_ctx[cpu], M_IPFW3);
-			ipfw_ctx[cpu] = NULL;
+		if (fw3_ctx[cpu] != NULL) {
+			kfree(fw3_ctx[cpu], M_IPFW3);
+			fw3_ctx[cpu] = NULL;
 		}
 	}
 	kprintf("ipfw3 unloaded\n");

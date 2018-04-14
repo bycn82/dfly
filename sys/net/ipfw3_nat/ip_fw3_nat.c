@@ -88,7 +88,7 @@
 
 struct ip_fw3_nat_context	*ip_fw3_nat_ctx[MAXCPU];
 static struct callout 		ip_fw3_nat_cleanup_callout;
-extern struct ipfw_context 	*ipfw_ctx[MAXCPU];
+extern struct ipfw3_context 	*fw3_ctx[MAXCPU];
 extern ip_fw_ctl_t 		*ipfw_ctl_nat_ptr;
 
 static int 			sysctl_var_cleanup_interval = 1;

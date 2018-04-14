@@ -80,7 +80,7 @@
 
 MALLOC_DEFINE(M_IPFW3_SYNC, "IPFW3_SYNC", "mem for ipfw3sync");
 
-extern struct ipfw_context *ipfw_ctx[MAXCPU];
+extern struct ipfw3_context *fw3_ctx[MAXCPU];
 extern struct ipfw_sync_context sync_ctx;
 ipfw_sync_send_state_t *ipfw_sync_send_state_prt = NULL;
 ipfw_sync_install_state_t *ipfw_sync_install_state_prt = NULL;

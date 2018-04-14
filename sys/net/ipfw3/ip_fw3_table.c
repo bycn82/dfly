@@ -77,7 +77,7 @@
 
 MALLOC_DEFINE(M_IPFW3_TABLE, "IPFW3_TABLE", "mem for ip_fw3 table");
 
-extern struct ipfw_context	*ipfw_ctx[MAXCPU];
+extern struct ipfw3_context	*fw3_ctx[MAXCPU];
 
 /*
  * activate/create the table by setup the type and reset counts.
@@ -87,7 +87,7 @@ table_create_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_table *tbmsg = (struct netmsg_table *)nmsg;
 	struct ipfw_ioc_table *ioc_table;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
 	ioc_table = tbmsg->ioc_table;
 	int id = ioc_table->id;
@@ -118,7 +118,7 @@ table_delete_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_table *tbmsg = (struct netmsg_table *)nmsg;
 	struct ipfw_ioc_table *ioc_tbl;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
 	struct radix_node_head *rnh;
 
@@ -143,7 +143,7 @@ table_append_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_table *tbmsg = (struct netmsg_table *)nmsg;
 	struct ipfw_ioc_table *ioc_tbl;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
 	struct radix_node_head *rnh;
 
@@ -201,7 +201,7 @@ table_remove_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_table *tbmsg = (struct netmsg_table *)nmsg;
 	struct ipfw_ioc_table *ioc_tbl;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
 	struct radix_node_head *rnh;
 	struct table_entry *ent;
@@ -264,7 +264,7 @@ table_flush_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_table *tbmsg = (struct netmsg_table *)nmsg;
 	struct ipfw_ioc_table *ioc_tbl;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
 	struct radix_node_head *rnh;
 
@@ -286,7 +286,7 @@ table_rename_dispatch(netmsg_t nmsg)
 {
 	struct netmsg_table *tbmsg = (struct netmsg_table *)nmsg;
 	struct ipfw_ioc_table *ioc_tbl;
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
 
 	ioc_tbl = tbmsg->ioc_table;
@@ -302,7 +302,7 @@ table_rename_dispatch(netmsg_t nmsg)
 int
 ipfw_ctl_table_list(struct sockopt *sopt)
 {
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx = ctx->table_ctx;
 	struct ipfw_ioc_table *ioc_table;
 	int i, error = 0, size;
@@ -396,7 +396,7 @@ dump_table_mac_entry(struct radix_node *rn, void *arg)
 int
 ipfw_ctl_table_show(struct sockopt *sopt)
 {
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
 	struct radix_node_head *rnh;
 	struct ipfw_ioc_table *tbl;
@@ -452,7 +452,7 @@ ipfw_ctl_table_show(struct sockopt *sopt)
 int
 ipfw_ctl_table_test(struct sockopt *sopt)
 {
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
 	struct radix_node_head *rnh;
 	struct ipfw_ioc_table *tbl;
@@ -591,7 +591,7 @@ ipfw_ctl_table_sockopt(struct sockopt *sopt)
 static void
 table_init_ctx_dispatch(netmsg_t nmsg)
 {
-	struct ipfw_context *ctx = ipfw_ctx[mycpuid];
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	ctx->table_ctx = kmalloc(sizeof(struct ipfw_table_context) * IPFW_TABLES_MAX,
 			M_IPFW3_TABLE, M_WAITOK | M_ZERO);
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
@@ -607,7 +607,7 @@ table_fini(void)
 	struct radix_node_head *rnh;
 	int cpu, id;
 	for (cpu = 0; cpu < ncpus; cpu++) {
-		table_ctx = ipfw_ctx[cpu]->table_ctx;
+		table_ctx = fw3_ctx[cpu]->table_ctx;
 		tmp_table = table_ctx;
 		for (id = 0; id < IPFW_TABLES_MAX; id++, table_ctx++) {
 			if (table_ctx->type == 1) {
