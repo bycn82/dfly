@@ -89,14 +89,14 @@ static int 	state_hash_size_old = 0;
 static int 	state_hash_size = 4096;
 
 
-static int ipfw_sysctl_adjust_hash_size(SYSCTL_HANDLER_ARGS);
+static int ip_fw3_sysctl_adjust_hash_size(SYSCTL_HANDLER_ARGS);
 void adjust_hash_size_dispatch(netmsg_t nmsg);
 
 SYSCTL_NODE(_net_inet_ip, OID_AUTO, fw_basic,
 		CTLFLAG_RW, 0, "Firewall Basic");
 SYSCTL_PROC(_net_inet_ip_fw_basic, OID_AUTO, state_hash_size,
 		CTLTYPE_INT | CTLFLAG_RW, &state_hash_size, 0,
-		ipfw_sysctl_adjust_hash_size, "I", "Adjust hash size");
+		ip_fw3_sysctl_adjust_hash_size, "I", "Adjust hash size");
 
 SYSCTL_INT(_net_inet_ip_fw_basic, OID_AUTO, state_lifetime, CTLFLAG_RW,
 		&state_lifetime, 0, "default life time");
@@ -112,7 +112,7 @@ static int iface_match(struct ifnet *ifp, ipfw_insn_if *cmd);
 static __inline int hash_packet(struct ipfw_flow_id *id);
 
 static int
-ipfw_sysctl_adjust_hash_size(SYSCTL_HANDLER_ARGS)
+ip_fw3_sysctl_adjust_hash_size(SYSCTL_HANDLER_ARGS)
 {
 	int error, value = 0;
 

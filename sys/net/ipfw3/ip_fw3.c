@@ -2046,8 +2046,8 @@ ip_fw3_init(void)
 	struct netmsg_base smsg;
 	int error;
 
-	ipfw3_log_modevent(MOD_LOAD);
-	ipfw3_sync_modevent(MOD_LOAD);
+	ip_fw3_log_modevent(MOD_LOAD);
+	ip_fw3_sync_modevent(MOD_LOAD);
 
 	init_module();
 	netmsg_init(&smsg, NULL, &curthread->td_msgport,
@@ -2092,8 +2092,8 @@ ip_fw3_fini(void)
 {
 	struct netmsg_base smsg;
 
-	ipfw3_log_modevent(MOD_UNLOAD);
-	ipfw3_sync_modevent(MOD_UNLOAD);
+	ip_fw3_log_modevent(MOD_UNLOAD);
+	ip_fw3_sync_modevent(MOD_UNLOAD);
 
 	netmsg_init(&smsg, NULL, &curthread->td_msgport,
 			0, ip_fw3_fini_dispatch);

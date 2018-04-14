@@ -74,7 +74,7 @@
 #include <net/ipfw3/ip_fw.h>
 #include <net/ipfw3/ip_fw3_log.h>
 
-extern int fw_verbose;
+extern int sysctl_var_fw3_verbose;
 extern struct if_clone *if_clone_lookup(const char *, int *);
 
 static const char ipfw_log_ifname[] = "ipfw";
@@ -128,7 +128,7 @@ ipfw_log(struct mbuf *m, struct ether_header *eh, uint16_t id)
 {
 	struct ifnet *the_if = NULL;
 
-	if (fw_verbose) {
+	if (sysctl_var_fw3_verbose) {
 #ifndef WITHOUT_BPF
 		LOGIF_RLOCK();
 		the_if = log_if_table[id];
@@ -161,7 +161,7 @@ ipfw_log(struct mbuf *m, struct ether_header *eh, uint16_t id)
 }
 
 static int
-ipfw_log_clone_create(struct if_clone *ifc, int unit, caddr_t param __unused)
+ip_fw3_log_clone_create(struct if_clone *ifc, int unit, caddr_t param __unused)
 {
 	struct ifnet *ifp;
 
@@ -199,7 +199,7 @@ ipfw_log_clone_create(struct if_clone *ifc, int unit, caddr_t param __unused)
 }
 
 static int
-ipfw_log_clone_destroy(struct ifnet *ifp)
+ip_fw3_log_clone_destroy(struct ifnet *ifp)
 {
 	int unit;
 
@@ -224,12 +224,12 @@ ipfw_log_clone_destroy(struct ifnet *ifp)
 	return (0);
 }
 
-static eventhandler_tag ipfw_log_ifdetach_cookie;
+static eventhandler_tag ip_fw3_log_ifdetach_cookie;
 static struct if_clone ipfw_log_cloner = IF_CLONE_INITIALIZER(ipfw_log_ifname,
-		ipfw_log_clone_create, ipfw_log_clone_destroy, 0, 9);
+		ip_fw3_log_clone_create, ip_fw3_log_clone_destroy, 0, 9);
 
 
-void ipfw3_log_modevent(int type){
+void ip_fw3_log_modevent(int type){
 	struct ifnet *tmpif;
 	int i;
 
@@ -238,19 +238,19 @@ void ipfw3_log_modevent(int type){
 		LOGIF_LOCK_INIT();
 		log_if_count = 0;
 		if_clone_attach(&ipfw_log_cloner);
-		ipfw_log_ifdetach_cookie =
+		ip_fw3_log_ifdetach_cookie =
 			EVENTHANDLER_REGISTER(ifnet_detach_event,
-				ipfw_log_clone_destroy, &ipfw_log_cloner,
+				ip_fw3_log_clone_destroy, &ipfw_log_cloner,
 				EVENTHANDLER_PRI_ANY);
 		break;
 	case MOD_UNLOAD:
 		EVENTHANDLER_DEREGISTER(ifnet_detach_event,
-					ipfw_log_ifdetach_cookie);
+					ip_fw3_log_ifdetach_cookie);
 		if_clone_detach(&ipfw_log_cloner);
 		for(i = 0; log_if_count > 0 && i < LOG_IF_MAX; i++){
 			tmpif = log_if_table[i];
 			if (tmpif != NULL) {
-				ipfw_log_clone_destroy(tmpif);
+				ip_fw3_log_clone_destroy(tmpif);
 			}
 		}
 		LOGIF_LOCK_DESTROY();

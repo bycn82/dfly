@@ -80,7 +80,7 @@ struct ipfw3_sync_context{
 #ifdef _KERNEL
 
 
-void ipfw3_sync_modevent(int type);
+void ip_fw3_sync_modevent(int type);
 
 struct cmd_send_test {
 	int type;

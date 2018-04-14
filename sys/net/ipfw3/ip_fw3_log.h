@@ -38,7 +38,7 @@
 
 #define LOG_IF_MAX	10
 
-void ipfw3_log_modevent(int type);
+void ip_fw3_log_modevent(int type);
 
 void
 ipfw_log(struct mbuf *m, struct ether_header *eh, uint16_t id);

@@ -473,7 +473,7 @@ ipfw_sync_send_state(struct ip_fw_state *state, int cpu, int hash)
 }
 
 void
-ipfw3_sync_modevent(int type)
+ip_fw3_sync_modevent(int type)
 {
 	switch (type) {
 		case MOD_LOAD:
