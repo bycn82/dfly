@@ -95,16 +95,15 @@ static int 	state_count_max = 4096;
 
 void	ipfw_sync_install_state(struct cmd_send_state *cmd);
 
-SYSCTL_NODE(_net_inet_ip, OID_AUTO, fw_basic,
-		CTLFLAG_RW, 0, "Firewall Basic");
+SYSCTL_NODE(_net_inet_ip, OID_AUTO, fw3_basic, CTLFLAG_RW, 0, "Firewall Basic");
 
-SYSCTL_INT(_net_inet_ip_fw_basic, OID_AUTO, state_lifetime, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_lifetime, CTLFLAG_RW,
 		&state_lifetime, 0, "default life time");
-SYSCTL_INT(_net_inet_ip_fw_basic, OID_AUTO,
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO,
 		sysctl_var_basic_cleanup_interval, CTLFLAG_RW,
 		&sysctl_var_basic_cleanup_interval, 0,
 		"default state expiry check interval");
-SYSCTL_INT(_net_inet_ip_fw_basic, OID_AUTO, state_count_max, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_count_max, CTLFLAG_RW,
 		&state_count_max, 0, "maximum of state");
 
 static struct ip_fw *lookup_next_rule(struct ip_fw *me);
