@@ -692,7 +692,7 @@ check_dst_n_port(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 
 
 static void
-ipfw_basic_add_state(struct ipfw_ioc_state *ioc_state)
+ip_fw3_basic_add_state(struct ipfw_ioc_state *ioc_state)
 {
 	/* TODO */
 }
@@ -704,7 +704,7 @@ ipfw_basic_add_state(struct ipfw_ioc_state *ioc_state)
  * 		flush states which stub is the rule
  */
 static void
-ipfw_basic_flush_state(struct ip_fw *rule)
+ip_fw3_basic_flush_state(struct ip_fw *rule)
 {
 
 }
@@ -739,12 +739,12 @@ ipfw_basic_init_dispatch(netmsg_t msg)
 }
 
 static int
-ipfw_basic_init(void)
+ip_fw3_basic_init(void)
 {
 	struct netmsg_base msg;
 
-	ipfw_basic_flush_state_prt = ipfw_basic_flush_state;
-	ipfw_basic_append_state_prt = ipfw_basic_add_state;
+	ipfw_basic_flush_state_prt = ip_fw3_basic_flush_state;
+	ipfw_basic_append_state_prt = ip_fw3_basic_add_state;
 	ipfw_sync_install_state_prt = ipfw_sync_install_state;
 
 	ip_fw3_register_module(MODULE_BASIC_ID, MODULE_BASIC_NAME);
@@ -819,18 +819,18 @@ ipfw_basic_init(void)
 }
 
 static void
-ipfw_basic_stop_dispatch(netmsg_t msg)
+ip_fw3_basic_fini_dispatch(netmsg_t msg)
 {
 	/* TODO */
 	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
 }
 
 static int
-ipfw_basic_stop(void)
+ip_fw3_basic_fini(void)
 {
 	struct netmsg_base smsg;
 	netmsg_init(&smsg, NULL, &curthread->td_msgport,
-		0, ipfw_basic_stop_dispatch);
+		0, ip_fw3_basic_fini_dispatch);
 	return lwkt_domsg(IPFW_CFGPORT, &smsg.lmsg, 0);
 }
 
@@ -841,10 +841,10 @@ ipfw3_basic_modevent(module_t mod, int type, void *data)
 	int err;
 	switch (type) {
 		case MOD_LOAD:
-			err = ipfw_basic_init();
+			err = ip_fw3_basic_init();
 			break;
 		case MOD_UNLOAD:
-			err = ipfw_basic_stop();
+			err = ip_fw3_basic_fini();
 			break;
 		default:
 			err = 1;
