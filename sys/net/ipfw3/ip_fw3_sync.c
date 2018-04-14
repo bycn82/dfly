@@ -448,13 +448,9 @@ ip_fw3_sync_send_state(struct ipfw3_state *state, int cpu, int hash)
 	}
 
 	cmd.type = 1;
-	cmd.rulenum = state->stub->rulenum;
-	cmd.lifetime = state->lifetime;
-	cmd.expiry = state->expiry;
 	cmd.cpu = cpu;
 	cmd.hash = hash;
 
-	memcpy(&cmd.flow, &state->flow_id, sizeof(struct ipfw_flow_id));
 	memcpy(m->m_data, &cmd, len);
 
 	m->m_len = len;

@@ -77,8 +77,11 @@ struct ipfw3_sync_context{
 	struct socket *centre_socks[MAX_EDGES]; /* centre socks */
 };
 
+
+
 #ifdef _KERNEL
 
+#include <net/ipfw3_basic/ip_fw3_basic.h>
 
 void ip_fw3_sync_modevent(int type);
 

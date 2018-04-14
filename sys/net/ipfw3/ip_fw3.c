@@ -1426,22 +1426,6 @@ ip_fw3_ctl_add_rule(struct sockopt *sopt)
 }
 
 static void *
-ip_fw3_copy_state(struct ipfw3_state *state,
-		struct ipfw_ioc_state *ioc_state, int cpuid)
-{
-	ioc_state->pcnt = state->pcnt;
-	ioc_state->bcnt = state->bcnt;
-	ioc_state->lifetime = state->lifetime;
-	ioc_state->timestamp = state->timestamp;
-	ioc_state->cpuid = cpuid;
-	ioc_state->expiry = state->expiry;
-	ioc_state->rulenum = state->stub->rulenum;
-
-	bcopy(&state->flow_id, &ioc_state->flow_id, sizeof(struct ipfw_flow_id));
-	return ioc_state + 1;
-}
-
-static void *
 ip_fw3_copy_rule(const struct ip_fw *rule, struct ipfw_ioc_rule *ioc_rule)
 {
 	const struct ip_fw *sibling;
@@ -1512,23 +1496,12 @@ static int
 ip_fw3_ctl_get_rules(struct sockopt *sopt)
 {
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
-	struct ipfw3_state_context *state_ctx;
 	struct ip_fw *rule;
-	struct ipfw3_state *state;
 	void *bp;
 	size_t size;
-	int i, j, state_count = 0;
+
 
 	size = static_ioc_len;
-	for (i = 0; i < ncpus; i++) {
-		for (j = 0; j < ctx->state_hash_size; j++) {
-			state_ctx = &fw3_ctx[i]->state_ctx[j];
-			state_count += state_ctx->count;
-		}
-	}
-	if (state_count > 0) {
-		size += state_count * sizeof(struct ipfw_ioc_state);
-	}
 
 	if (sopt->sopt_valsize < size) {
 		/* XXX TODO sopt_val is not big enough */
@@ -1541,18 +1514,6 @@ ip_fw3_ctl_get_rules(struct sockopt *sopt)
 
 	for (rule = ctx->ipfw_rule_chain; rule; rule = rule->next) {
 		bp = ip_fw3_copy_rule(rule, bp);
-	}
-	if (state_count > 0 ) {
-		for (i = 0; i < ncpus; i++) {
-			for (j = 0; j < ctx->state_hash_size; j++) {
-				state_ctx = &fw3_ctx[i]->state_ctx[j];
-				state = state_ctx->state;
-				while (state != NULL) {
-					bp = ip_fw3_copy_state(state, bp, i);
-					state = state->next;
-				}
-			}
-		}
 	}
 	return 0;
 }

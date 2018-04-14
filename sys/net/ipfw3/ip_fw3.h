@@ -41,14 +41,31 @@
 
 #include <net/bpf.h>
 
-#ifdef _KERNEL
-#include <net/netisr2.h>
 
-int     ip_fw3_sockopt(struct sockopt *);
-extern int ip_fw3_loaded;
-#endif
+#define NEED1(msg)  {if (ac < 1) errx(EX_USAGE, msg);}
+#define NEED2(msg)  {if (ac < 2) errx(EX_USAGE, msg);}
+#define NEED(c, n, msg) {if (c < n) errx(EX_USAGE, msg);}
 
-#define	IPFW3_LOADED	(ip_fw3_loaded)
+#define NEXT_ARG	ac--; if(ac > 0){av++;}
+#define NEXT_ARG1 	(*ac)--; if(*ac > 0){(*av)++;}
+
+#define IPFW_RULE_SIZE_MAX	255	/* unit: uint32_t */
+
+/*
+ * type of the keyword, it indecates the position of the keyword in the rule
+ *      BEFORE ACTION FROM TO FILTER OTHER
+ */
+#define NONE            0
+#define BEFORE          1
+#define ACTION          2
+#define PROTO           3
+#define FROM            4
+#define TO              5
+#define FILTER          6
+#define AFTER           7
+
+#define NOT_IN_USE      0
+#define IN_USE          1
 
 /*
  * _IPFW2_H is from ipfw/ip_fw2.h, both cannot be included past this
@@ -105,6 +122,9 @@ typedef struct	_ipfw_insn {	/* template for instructions */
 	uint8_t		arg3;
 	uint16_t	arg2;
 } ipfw_insn;
+
+#define ACTION_PTR(rule)	\
+	(ipfw_insn *)((uint32_t *)((rule)->cmd) + ((rule)->act_ofs))
 
 /*
  * The F_INSN_SIZE(type) computes the size, in 4-byte words, of
@@ -267,19 +287,6 @@ struct ipfw_flow_id {
 	uint8_t		flags;	/* protocol-specific flags */
 };
 
-struct ipfw3_state {
-	struct ipfw3_state	*next;
-	struct ipfw_flow_id	flow_id;
-	struct ip_fw	*stub;
-
-	uint64_t	pcnt;	   /* packet match counter	 */
-	uint64_t	bcnt;	   /* byte match counter	   */
-
-	uint16_t	lifetime;
-	uint32_t	timestamp;
-	uint32_t	expiry;
-};
-
 
 /* ip_fw3_chk/ip_fw_chk_ptr return values */
 #define IP_FW_PASS	0
@@ -328,65 +335,6 @@ struct ip_fw_args {
 	uint32_t	cookie;
 };
 
-#ifdef _KERNEL
-/*
- * Function definitions.
- */
-int	ip_fw_sockopt(struct sockopt *);
-int	ip_fw3_ctl_x(struct sockopt *sopt);
-
-/* Firewall hooks */
-struct sockopt;
-struct dn_flow_set;
-
-typedef int	ip_fw_chk_t(struct ip_fw_args *);
-typedef int	ip_fw_ctl_t(struct sockopt *);
-typedef struct mbuf *ip_fw_dn_io_t(struct mbuf *, int, int, struct ip_fw_args *);
-
-
-extern ip_fw_chk_t	*ip_fw_chk_ptr;
-extern ip_fw_ctl_t	*ip_fw_ctl_x_ptr;
-extern ip_fw_dn_io_t	*ip_fw_dn_io_ptr;
-
-#define IPFW_CFGCPUID	0
-#define IPFW_CFGPORT	netisr_cpuport(IPFW_CFGCPUID)
-#define IPFW_ASSERT_CFGPORT(msgport)				\
-	KASSERT((msgport) == IPFW_CFGPORT, ("not IPFW CFGPORT"))
-
-#define	IPFW_TABLES_MAX		32
-
-/* root of place holding all information, per-cpu */
-struct ipfw3_context {
-	struct ip_fw	*ipfw_rule_chain;		/* list of rules*/
-	struct ip_fw	*ipfw_default_rule;	 /* default rule */
-	struct ipfw3_state_context *state_ctx;
-	struct ipfw_table_context *table_ctx;
-	uint16_t		state_hash_size;
-	uint32_t		ipfw_set_disable;
-};
-
-/* place to hold the states */
-struct ipfw3_state_context {
-	struct ipfw3_state *state;
-	struct ipfw3_state *last;
-	int	count;
-};
-
-
-typedef void (*filter_func)(int *cmd_ctl,int *cmd_val,struct ip_fw_args **args,
-struct ip_fw **f,ipfw_insn *cmd,uint16_t ip_len);
-void ip_fw3_register_filter_funcs(int module,int opcode,filter_func func);
-void unregister_ipfw_filter_funcs(int module,filter_func func);
-void ip_fw3_register_module(int module_id,char *module_name);
-int ip_fw3_unregister_module(int module_id);
-
-#endif
-
-#define ACTION_PTR(rule)	\
-	(ipfw_insn *)((uint32_t *)((rule)->cmd) + ((rule)->act_ofs))
-
-
-
 struct ipfw_ioc_rule {
 	uint16_t	act_ofs;	/* offset of action in 32-bit units */
 	uint16_t	cmd_len;	/* # of 32-bit words in cmd	*/
@@ -409,27 +357,9 @@ struct ipfw_ioc_rule {
 	ipfw_insn	cmd[1];		/* storage for commands		*/
 };
 
-#define IPFW_USR_F_NORULE	0x01
-
-#define IPFW_RULE_SIZE_MAX	255	/* unit: uint32_t */
-
 #define IOC_RULESIZE(rule)	\
 	(sizeof(struct ipfw_ioc_rule) + (rule)->cmd_len * 4 - SIZE_OF_IPFWINSN)
 
-struct ipfw_ioc_flowid {
-	uint16_t	type;	/* ETHERTYPE_ */
-	uint16_t	pad;
-	union {
-		struct {
-			uint32_t dst_ip;
-			uint32_t src_ip;
-			uint16_t dst_port;
-			uint16_t src_port;
-			uint8_t proto;
-		} ip;
-		uint8_t pad[64];
-	} u;
-};
 
 struct ipfw_ioc_state {
 	uint64_t	pcnt;		/* packet match counter		*/
@@ -444,74 +374,13 @@ struct ipfw_ioc_state {
 	uint8_t		reserved[16];
 };
 
-/*
- * Definitions for IP option names.
- */
-#define	IP_FW_IPOPT_LSRR	0x01
-#define	IP_FW_IPOPT_SSRR	0x02
-#define	IP_FW_IPOPT_RR		0x04
-#define	IP_FW_IPOPT_TS		0x08
-
-/*
- * Definitions for TCP option names.
- */
-#define	IP_FW_TCPOPT_MSS	0x01
-#define	IP_FW_TCPOPT_WINDOW	0x02
-#define	IP_FW_TCPOPT_SACK	0x04
-#define	IP_FW_TCPOPT_TS		0x08
-#define	IP_FW_TCPOPT_CC		0x10
-
-#define	ICMP_REJECT_RST		0x100	/* fake ICMP code (send a TCP RST) */
-
-struct ipfw3_module{
-	int type;
-	int id;
-	char name[20];
-};
-
-/*
- * type of the keyword, it indecates the position of the keyword in the rule
- *      BEFORE ACTION FROM TO FILTER OTHER
- */
-#define NONE            0
-#define BEFORE          1
-#define ACTION          2
-#define PROTO           3
-#define FROM            4
-#define TO              5
-#define FILTER          6
-#define AFTER           7
-
-#define NOT_IN_USE      0
-#define IN_USE          1
-
-
-#define NEED1(msg)  {if (ac < 1) errx(EX_USAGE, msg);}
-#define NEED2(msg)  {if (ac < 2) errx(EX_USAGE, msg);}
-#define NEED(c, n, msg) {if (c < n) errx(EX_USAGE, msg);}
-
-#define NEXT_ARG	ac--; if(ac > 0){av++;}
-#define NEXT_ARG1 	(*ac)--; if(*ac > 0){(*av)++;}
-
-#define MATCH_REVERSE	0
-#define MATCH_FORWARD	1
-#define MATCH_NONE	2
-#define MATCH_UNKNOWN	3
-
-#define L3HDR(T, ip) ((T *)((uint32_t *)(ip) + (ip)->ip_hl))
-
 /* IP_FW_X header/opcodes */
 typedef struct _ip_fw_x_header {
 	uint16_t opcode;	/* Operation opcode */
 	uint16_t _pad;   	/* Opcode version */
 } ip_fw_x_header;
 
-typedef void ipfw_basic_delete_state_t(struct ip_fw *);
-typedef void ipfw_basic_append_state_t(struct ipfw_ioc_state *);
-typedef void ipfw_sync_send_state_t(struct ipfw3_state *, int cpu, int hash);
-
 /* IP_FW3 opcodes */
-
 #define IP_FW_ADD		50   /* add a firewall rule to chain */
 #define IP_FW_DEL		51   /* delete a firewall rule from chain */
 #define IP_FW_FLUSH		52   /* flush firewall rule chain */
@@ -561,6 +430,142 @@ typedef void ipfw_sync_send_state_t(struct ipfw3_state *, int cpu, int hash);
 #define IP_FW_SYNC_CENTRE_STOP	91	/* stop the centre */
 #define IP_FW_SYNC_CENTRE_TEST	92	/* test sync centre */
 #define IP_FW_SYNC_CENTRE_CLEAR	93	/* stop and clear the centre */
-#endif
 
+
+
+
+#ifdef _KERNEL
+
+
+
+
+#include <net/netisr2.h>
+
+extern int ip_fw3_loaded;
+
+#define	IPFW3_LOADED	(ip_fw3_loaded)
+
+struct sockopt;
+struct dn_flow_set;
+
+/*
+ * Function definitions.
+ */
+int	ip_fw_sockopt(struct sockopt *);
+int     ip_fw3_sockopt(struct sockopt *);
+int	ip_fw3_ctl_x(struct sockopt *sopt);
+
+/* Firewall hooks */
+
+typedef int	ip_fw_chk_t(struct ip_fw_args *);
+typedef int	ip_fw_ctl_t(struct sockopt *);
+typedef struct mbuf *ip_fw_dn_io_t(struct mbuf *, int, int, struct ip_fw_args *);
+
+extern ip_fw_chk_t	*ip_fw_chk_ptr;
+extern ip_fw_ctl_t	*ip_fw_ctl_x_ptr;
+extern ip_fw_dn_io_t	*ip_fw_dn_io_ptr;
+
+
+#define IPFW_CFGCPUID	0
+#define IPFW_CFGPORT	netisr_cpuport(IPFW_CFGCPUID)
+#define IPFW_ASSERT_CFGPORT(msgport)				\
+	KASSERT((msgport) == IPFW_CFGPORT, ("not IPFW CFGPORT"))
+
+#define	IPFW_TABLES_MAX		32
+
+/* root of place holding all information, per-cpu */
+struct ipfw3_context {
+	struct ip_fw		*ipfw_rule_chain;	/* list of rules*/
+	struct ip_fw		*ipfw_default_rule;	/* default rule */
+	struct ipfw3_state_context 	*state_ctx;
+	struct ipfw_table_context 	*table_ctx;
+	uint16_t	state_hash_size;
+	uint32_t	ipfw_set_disable;
+};
+
+
+typedef void (*filter_func)(int *cmd_ctl,int *cmd_val,struct ip_fw_args **args,
+struct ip_fw **f,ipfw_insn *cmd,uint16_t ip_len);
+void ip_fw3_register_filter_funcs(int module,int opcode,filter_func func);
+void unregister_ipfw_filter_funcs(int module,filter_func func);
+void ip_fw3_register_module(int module_id,char *module_name);
+int ip_fw3_unregister_module(int module_id);
+
+
+
+
+
+
+
+
+
+#define IPFW_USR_F_NORULE	0x01
+
+
+
+
+
+struct ipfw_ioc_flowid {
+	uint16_t	type;	/* ETHERTYPE_ */
+	uint16_t	pad;
+	union {
+		struct {
+			uint32_t dst_ip;
+			uint32_t src_ip;
+			uint16_t dst_port;
+			uint16_t src_port;
+			uint8_t proto;
+		} ip;
+		uint8_t pad[64];
+	} u;
+};
+
+
+/*
+ * Definitions for IP option names.
+ */
+#define	IP_FW_IPOPT_LSRR	0x01
+#define	IP_FW_IPOPT_SSRR	0x02
+#define	IP_FW_IPOPT_RR		0x04
+#define	IP_FW_IPOPT_TS		0x08
+
+/*
+ * Definitions for TCP option names.
+ */
+#define	IP_FW_TCPOPT_MSS	0x01
+#define	IP_FW_TCPOPT_WINDOW	0x02
+#define	IP_FW_TCPOPT_SACK	0x04
+#define	IP_FW_TCPOPT_TS		0x08
+#define	IP_FW_TCPOPT_CC		0x10
+
+#define	ICMP_REJECT_RST		0x100	/* fake ICMP code (send a TCP RST) */
+
+struct ipfw3_module{
+	int type;
+	int id;
+	char name[20];
+};
+
+
+
+
+
+
+
+
+#define MATCH_REVERSE	0
+#define MATCH_FORWARD	1
+#define MATCH_NONE	2
+#define MATCH_UNKNOWN	3
+
+#define L3HDR(T, ip) ((T *)((uint32_t *)(ip) + (ip)->ip_hl))
+
+
+
+typedef void ipfw_basic_delete_state_t(struct ip_fw *);
+typedef void ipfw_basic_append_state_t(struct ipfw_ioc_state *);
+
+
+#endif /* _KERNEL */
+#endif
 #endif /* _IP_FW3_H_ */

@@ -37,10 +37,77 @@
 #define MODULE_BASIC_ID		0
 #define MODULE_BASIC_NAME 	"basic"
 
+enum ipfw_basic_opcodes {
+	O_BASIC_ACCEPT,		/* accept */
+	O_BASIC_DENY,		/* deny */
+	O_BASIC_COUNT,		/* count */
+	O_BASIC_SKIPTO,		/* skipto action->arg1	*/
+	O_BASIC_FORWARD,	/* arg3 count of dest, arg1 type of fwd */
+
+	O_BASIC_IN,		/* in */
+	O_BASIC_OUT,		/* out */
+	O_BASIC_VIA,		/* via */
+	O_BASIC_XMIT,		/* xmit */
+	O_BASIC_RECV,		/* recv */
+
+	O_BASIC_PROTO,		/*  arg1=protocol	*/
+	O_BASIC_IP_SRC,
+	O_BASIC_IP_SRC_N_PORT,	/* src ip: src port */
+	O_BASIC_IP_SRC_MASK,	/*  ip = IP/mask*/
+	O_BASIC_IP_SRC_ME,	/*  me  */
+	O_BASIC_IP_SRC_LOOKUP,	/*  from lookup table */
+
+	O_BASIC_IP_DST,
+	O_BASIC_IP_DST_N_PORT,	/* dst ip: dst port */
+	O_BASIC_IP_DST_MASK,	/*  ip = IP/mask */
+	O_BASIC_IP_DST_ME,	/*  me	*/
+	O_BASIC_IP_DST_LOOKUP,	/*  to lookup table */
+
+	O_BASIC_IP_SRCPORT,	/*  src-port */
+	O_BASIC_IP_DSTPORT,	/*  dst-port */
+	O_BASIC_PROB,		/*  probability 0~1*/
+	O_BASIC_KEEP_STATE,	/*  */
+	O_BASIC_CHECK_STATE,	/*  */
+	O_BASIC_TAG,		/*  action, add tag info into mbuf */
+	O_BASIC_UNTAG,		/*  action, remote tag from mbuf */
+	O_BASIC_TAGGED,		/*  filter, check the tag info */
+
+	O_BASIC_COMMENT,	/*  comment,behind action, no check */
+};
+
+
+#define IS_EXPIRED(state)  (state->lifetime > 0 && 			\
+		(state->timestamp + state->lifetime) < time_second) ||	\
+		((state->expiry != 0) && (state->expiry < time_second))
+
+#define IPFW_BASIC_LOADED   (ip_fw_basic_loaded)
+
+
+
+
 #ifdef _KERNEL
 
-MALLOC_DEFINE(M_IPFW3_BASIC, "IPFW3_BASIC", "ipfw3_basic module");
-void	ipfw_sync_install_state(struct cmd_send_state *cmd);
+
+
+struct ipfw3_state {
+	RB_ENTRY(ipfw3_state)	entries;
+	uint32_t		src_addr;
+	uint32_t		dst_addr;
+	uint16_t		src_port;
+	uint16_t		dst_port;
+	u_char			proto;
+	time_t			timestamp;
+};
+
+RB_HEAD(fw3_state_tree, ipfw3_state);
+
+/* place to hold the states */
+struct ipfw3_state_context {
+	struct fw3_state_tree	fw3_states;
+};
+
+typedef void ipfw_sync_send_state_t(struct ipfw3_state *, int cpu, int hash);
+
 
 /* prototype of the checker functions */
 void	check_count(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
@@ -100,51 +167,5 @@ int 	match_state(ipfw_insn *cmd, struct ipfw_flow_id *fid,
 int 	count_match_state(ipfw_insn *cmd, struct ipfw_flow_id *fid,
 		struct ipfw3_state *state, int *count);
 
-#endif
-
-enum ipfw_basic_opcodes {
-	O_BASIC_ACCEPT,		/* accept */
-	O_BASIC_DENY,		/* deny */
-	O_BASIC_COUNT,		/* count */
-	O_BASIC_SKIPTO,		/* skipto action->arg1	*/
-	O_BASIC_FORWARD,	/* arg3 count of dest, arg1 type of fwd */
-
-	O_BASIC_IN,		/* in */
-	O_BASIC_OUT,		/* out */
-	O_BASIC_VIA,		/* via */
-	O_BASIC_XMIT,		/* xmit */
-	O_BASIC_RECV,		/* recv */
-
-	O_BASIC_PROTO,		/*  arg1=protocol	*/
-	O_BASIC_IP_SRC,
-	O_BASIC_IP_SRC_N_PORT,	/* src ip: src port */
-	O_BASIC_IP_SRC_MASK,	/*  ip = IP/mask*/
-	O_BASIC_IP_SRC_ME,	/*  me  */
-	O_BASIC_IP_SRC_LOOKUP,	/*  from lookup table */
-
-	O_BASIC_IP_DST,
-	O_BASIC_IP_DST_N_PORT,	/* dst ip: dst port */
-	O_BASIC_IP_DST_MASK,	/*  ip = IP/mask */
-	O_BASIC_IP_DST_ME,	/*  me	*/
-	O_BASIC_IP_DST_LOOKUP,	/*  to lookup table */
-
-	O_BASIC_IP_SRCPORT,	/*  src-port */
-	O_BASIC_IP_DSTPORT,	/*  dst-port */
-	O_BASIC_PROB,		/*  probability 0~1*/
-	O_BASIC_KEEP_STATE,	/*  */
-	O_BASIC_CHECK_STATE,	/*  */
-	O_BASIC_TAG,		/*  action, add tag info into mbuf */
-	O_BASIC_UNTAG,		/*  action, remote tag from mbuf */
-	O_BASIC_TAGGED,		/*  filter, check the tag info */
-
-	O_BASIC_COMMENT,	/*  comment,behind action, no check */
-};
-
-
-#define IS_EXPIRED(state)  (state->lifetime > 0 && 			\
-		(state->timestamp + state->lifetime) < time_second) ||	\
-		((state->expiry != 0) && (state->expiry < time_second))
-
-#define IPFW_BASIC_LOADED   (ip_fw_basic_loaded)
-
+#endif	/* _KERNEL */
 #endif
