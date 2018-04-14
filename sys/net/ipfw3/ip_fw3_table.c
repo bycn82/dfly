@@ -300,7 +300,7 @@ table_rename_dispatch(netmsg_t nmsg)
  * list all the overview information about each table
  */
 int
-ipfw_ctl_table_list(struct sockopt *sopt)
+ip_fw3_ctl_table_list(struct sockopt *sopt)
 {
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx = ctx->table_ctx;
@@ -328,7 +328,7 @@ ipfw_ctl_table_list(struct sockopt *sopt)
  * remove an item from the table
  */
 int
-ipfw_ctl_table_remove(struct sockopt *sopt)
+ip_fw3_ctl_table_remove(struct sockopt *sopt)
 {
 	struct netmsg_table tbmsg;
 	bzero(&tbmsg,sizeof(tbmsg));
@@ -343,7 +343,7 @@ ipfw_ctl_table_remove(struct sockopt *sopt)
  * flush everything inside the table
  */
 int
-ipfw_ctl_table_flush(struct sockopt *sopt)
+ip_fw3_ctl_table_flush(struct sockopt *sopt)
 {
 	struct netmsg_table tbmsg;
 	bzero(&tbmsg,sizeof(tbmsg));
@@ -394,7 +394,7 @@ dump_table_mac_entry(struct radix_node *rn, void *arg)
  * get and display all items in the table
  */
 int
-ipfw_ctl_table_show(struct sockopt *sopt)
+ip_fw3_ctl_table_show(struct sockopt *sopt)
 {
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
@@ -450,7 +450,7 @@ ipfw_ctl_table_show(struct sockopt *sopt)
  * test whether the ip is in the table
  */
 int
-ipfw_ctl_table_test(struct sockopt *sopt)
+ip_fw3_ctl_table_test(struct sockopt *sopt)
 {
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw_table_context *table_ctx;
@@ -490,7 +490,7 @@ done:
  * activate the table
  */
 int
-ipfw_ctl_table_create(struct sockopt *sopt)
+ip_fw3_ctl_table_create(struct sockopt *sopt)
 {
 	struct netmsg_table tbmsg;
 	bzero(&tbmsg,sizeof(tbmsg));
@@ -505,7 +505,7 @@ ipfw_ctl_table_create(struct sockopt *sopt)
  * deactivate the table
  */
 int
-ipfw_ctl_table_delete(struct sockopt *sopt)
+ip_fw3_ctl_table_delete(struct sockopt *sopt)
 {
 	struct netmsg_table tbmsg;
 	bzero(&tbmsg,sizeof(tbmsg));
@@ -520,7 +520,7 @@ ipfw_ctl_table_delete(struct sockopt *sopt)
  * append an item into the table
  */
 int
-ipfw_ctl_table_append(struct sockopt *sopt)
+ip_fw3_ctl_table_append(struct sockopt *sopt)
 {
 	struct netmsg_table tbmsg;
 	bzero(&tbmsg,sizeof(tbmsg));
@@ -535,7 +535,7 @@ ipfw_ctl_table_append(struct sockopt *sopt)
  * rename an table
  */
 int
-ipfw_ctl_table_rename(struct sockopt *sopt)
+ip_fw3_ctl_table_rename(struct sockopt *sopt)
 {
 	struct netmsg_table tbmsg;
 	bzero(&tbmsg,sizeof(tbmsg));
@@ -550,36 +550,36 @@ ipfw_ctl_table_rename(struct sockopt *sopt)
  * sockopt handler
  */
 int
-ipfw_ctl_table_sockopt(struct sockopt *sopt)
+ip_fw3_ctl_table_sockopt(struct sockopt *sopt)
 {
 	int error = 0;
 	switch (sopt->sopt_name) {
 		case IP_FW_TABLE_CREATE:
-			error = ipfw_ctl_table_create(sopt);
+			error = ip_fw3_ctl_table_create(sopt);
 			break;
 		case IP_FW_TABLE_DELETE:
-			error = ipfw_ctl_table_delete(sopt);
+			error = ip_fw3_ctl_table_delete(sopt);
 			break;
 		case IP_FW_TABLE_APPEND:
-			error = ipfw_ctl_table_append(sopt);
+			error = ip_fw3_ctl_table_append(sopt);
 			break;
 		case IP_FW_TABLE_REMOVE:
-			error = ipfw_ctl_table_remove(sopt);
+			error = ip_fw3_ctl_table_remove(sopt);
 			break;
 		case IP_FW_TABLE_LIST:
-			error = ipfw_ctl_table_list(sopt);
+			error = ip_fw3_ctl_table_list(sopt);
 			break;
 		case IP_FW_TABLE_FLUSH:
-			error = ipfw_ctl_table_flush(sopt);
+			error = ip_fw3_ctl_table_flush(sopt);
 			break;
 		case IP_FW_TABLE_SHOW:
-			error = ipfw_ctl_table_show(sopt);
+			error = ip_fw3_ctl_table_show(sopt);
 			break;
 		case IP_FW_TABLE_TEST:
-			error = ipfw_ctl_table_test(sopt);
+			error = ip_fw3_ctl_table_test(sopt);
 			break;
 		case IP_FW_TABLE_RENAME:
-			error = ipfw_ctl_table_rename(sopt);
+			error = ip_fw3_ctl_table_rename(sopt);
 			break;
 		default:
 			kprintf("ipfw table invalid socket option %d\n",

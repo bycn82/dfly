@@ -91,7 +91,7 @@ ipfw_sync_install_state_t *ipfw_sync_install_state_prt = NULL;
  * ipfw3sync show config
  */
 int
-ipfw_ctl_sync_show_conf(struct sockopt *sopt)
+ip_fw3_ctl_sync_show_conf(struct sockopt *sopt)
 {
 	struct ipfw3_ioc_sync_context *tmp_sync_ctx;
 	int size;
@@ -116,7 +116,7 @@ ipfw_ctl_sync_show_conf(struct sockopt *sopt)
  * ipfw3sync show status
  */
 int
-ipfw_ctl_sync_show_status(struct sockopt *sopt)
+ip_fw3_ctl_sync_show_status(struct sockopt *sopt)
 {
 	int *running;
 	running = (int *)sopt->sopt_val;
@@ -128,7 +128,7 @@ ipfw_ctl_sync_show_status(struct sockopt *sopt)
  * ipfw3sync config centre
  */
 int
-ipfw_ctl_sync_centre_conf(struct sockopt *sopt)
+ip_fw3_ctl_sync_centre_conf(struct sockopt *sopt)
 {
 	struct ipfw3_ioc_sync_centre *ioc_centre;
 	int size;
@@ -151,7 +151,7 @@ ipfw_ctl_sync_centre_conf(struct sockopt *sopt)
  * ipfw3sync config edge
  */
 int
-ipfw_ctl_sync_edge_conf(struct sockopt *sopt)
+ip_fw3_ctl_sync_edge_conf(struct sockopt *sopt)
 {
 	struct ipfw3_ioc_sync_edge *ioc_edge;
 	struct thread *td;
@@ -224,7 +224,7 @@ sync_edge_socket_handler(void *dummy)
 }
 
 int
-ipfw_ctl_sync_edge_start(struct sockopt *sopt)
+ip_fw3_ctl_sync_edge_start(struct sockopt *sopt)
 {
 	struct sockaddr_in sin;
 	struct thread *td;
@@ -260,7 +260,7 @@ ipfw_ctl_sync_edge_start(struct sockopt *sopt)
 }
 
 int
-ipfw_ctl_sync_centre_start(struct sockopt *sopt)
+ip_fw3_ctl_sync_centre_start(struct sockopt *sopt)
 {
 	struct sockaddr_in sin;
 	struct thread *td;
@@ -298,13 +298,13 @@ ipfw_ctl_sync_centre_start(struct sockopt *sopt)
 }
 
 int
-ipfw_ctl_sync_edge_test(struct sockopt *sopt)
+ip_fw3_ctl_sync_edge_test(struct sockopt *sopt)
 {
 	return 0;
 }
 
 int
-ipfw_ctl_sync_centre_test(struct sockopt *sopt)
+ip_fw3_ctl_sync_centre_test(struct sockopt *sopt)
 {
 	struct cmd_send_test cmd;
 	struct mbuf *m;
@@ -346,7 +346,7 @@ ipfw_ctl_sync_centre_test(struct sockopt *sopt)
 	return 0;
 }
 int
-ipfw_ctl_sync_edge_stop(struct sockopt *sopt)
+ip_fw3_ctl_sync_edge_stop(struct sockopt *sopt)
 {
 	if (fw3_sync_ctx.running & 1) {
 		fw3_sync_ctx.running &= 2;
@@ -356,7 +356,7 @@ ipfw_ctl_sync_edge_stop(struct sockopt *sopt)
 }
 
 int
-ipfw_ctl_sync_centre_stop(struct sockopt *sopt)
+ip_fw3_ctl_sync_centre_stop(struct sockopt *sopt)
 {
 	int i;
 
@@ -370,13 +370,13 @@ ipfw_ctl_sync_centre_stop(struct sockopt *sopt)
 }
 
 int
-ipfw_ctl_sync_edge_clear(struct sockopt *sopt)
+ip_fw3_ctl_sync_edge_clear(struct sockopt *sopt)
 {
 	return 0;
 }
 
 int
-ipfw_ctl_sync_centre_clear(struct sockopt *sopt)
+ip_fw3_ctl_sync_centre_clear(struct sockopt *sopt)
 {
 	return 0;
 }
@@ -385,45 +385,45 @@ ipfw_ctl_sync_centre_clear(struct sockopt *sopt)
  * sockopt handler
  */
 int
-ipfw_ctl_sync_sockopt(struct sockopt *sopt)
+ip_fw3_ctl_sync_sockopt(struct sockopt *sopt)
 {
 	int error = 0;
 	switch (sopt->sopt_name) {
 		case IP_FW_SYNC_EDGE_CONF:
-			error = ipfw_ctl_sync_edge_conf(sopt);
+			error = ip_fw3_ctl_sync_edge_conf(sopt);
 			break;
 		case IP_FW_SYNC_CENTRE_CONF:
-			error = ipfw_ctl_sync_centre_conf(sopt);
+			error = ip_fw3_ctl_sync_centre_conf(sopt);
 			break;
 		case IP_FW_SYNC_SHOW_CONF:
-			error = ipfw_ctl_sync_show_conf(sopt);
+			error = ip_fw3_ctl_sync_show_conf(sopt);
 			break;
 		case IP_FW_SYNC_SHOW_STATUS:
-			error = ipfw_ctl_sync_show_status(sopt);
+			error = ip_fw3_ctl_sync_show_status(sopt);
 			break;
 		case IP_FW_SYNC_EDGE_START:
-			error = ipfw_ctl_sync_edge_start(sopt);
+			error = ip_fw3_ctl_sync_edge_start(sopt);
 			break;
 		case IP_FW_SYNC_CENTRE_START:
-			error = ipfw_ctl_sync_centre_start(sopt);
+			error = ip_fw3_ctl_sync_centre_start(sopt);
 			break;
 		case IP_FW_SYNC_EDGE_STOP:
-			error = ipfw_ctl_sync_edge_stop(sopt);
+			error = ip_fw3_ctl_sync_edge_stop(sopt);
 			break;
 		case IP_FW_SYNC_CENTRE_STOP:
-			error = ipfw_ctl_sync_centre_stop(sopt);
+			error = ip_fw3_ctl_sync_centre_stop(sopt);
 			break;
 		case IP_FW_SYNC_EDGE_CLEAR:
-			error = ipfw_ctl_sync_edge_clear(sopt);
+			error = ip_fw3_ctl_sync_edge_clear(sopt);
 			break;
 		case IP_FW_SYNC_CENTRE_CLEAR:
-			error = ipfw_ctl_sync_centre_clear(sopt);
+			error = ip_fw3_ctl_sync_centre_clear(sopt);
 			break;
 		case IP_FW_SYNC_EDGE_TEST:
-			error = ipfw_ctl_sync_edge_test(sopt);
+			error = ip_fw3_ctl_sync_edge_test(sopt);
 			break;
 		case IP_FW_SYNC_CENTRE_TEST:
-			error = ipfw_ctl_sync_centre_test(sopt);
+			error = ip_fw3_ctl_sync_centre_test(sopt);
 			break;
 		default:
 			kprintf("ipfw3 sync invalid socket option %d\n",
@@ -433,7 +433,7 @@ ipfw_ctl_sync_sockopt(struct sockopt *sopt)
 }
 
 void
-ipfw_sync_send_state(struct ip_fw_state *state, int cpu, int hash)
+ip_fw3_sync_send_state(struct ip_fw_state *state, int cpu, int hash)
 {
 	struct mbuf *m;
 	struct thread *td;
@@ -477,7 +477,7 @@ ip_fw3_sync_modevent(int type)
 {
 	switch (type) {
 		case MOD_LOAD:
-			ipfw_sync_send_state_prt = ipfw_sync_send_state;
+			ipfw_sync_send_state_prt = ip_fw3_sync_send_state;
 			break;
 		case MOD_UNLOAD:
 			if (fw3_sync_ctx.edges != NULL) {

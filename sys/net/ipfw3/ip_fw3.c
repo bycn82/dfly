@@ -1710,7 +1710,7 @@ ipfw_ctl(struct sockopt *sopt)
 		case IP_FW_TABLE_SHOW:
 		case IP_FW_TABLE_TEST:
 		case IP_FW_TABLE_RENAME:
-			error = ipfw_ctl_table_sockopt(sopt);
+			error = ip_fw3_ctl_table_sockopt(sopt);
 			break;
 		case IP_FW_SYNC_SHOW_CONF:
 		case IP_FW_SYNC_SHOW_STATUS:
@@ -1724,7 +1724,7 @@ ipfw_ctl(struct sockopt *sopt)
 		case IP_FW_SYNC_CENTRE_STOP:
 		case IP_FW_SYNC_CENTRE_TEST:
 		case IP_FW_SYNC_CENTRE_CLEAR:
-			error = ipfw_ctl_sync_sockopt(sopt);
+			error = ip_fw3_ctl_sync_sockopt(sopt);
 			break;
 		default:
 			kprintf("ipfw_ctl invalid option %d\n",
