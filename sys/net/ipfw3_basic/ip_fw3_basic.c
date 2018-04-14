@@ -92,18 +92,11 @@ static struct callout 		ip_fw3_basic_cleanup_callout;
 static int 	sysctl_var_basic_cleanup_interval = 1;
 static int 	state_lifetime = 20;
 static int 	state_count_max = 4096;
-static int 	state_hash_size_old = 0;
-static int 	state_hash_size = 4096;
 
 void	ipfw_sync_install_state(struct cmd_send_state *cmd);
-static int ip_fw3_sysctl_adjust_hash_size(SYSCTL_HANDLER_ARGS);
-void adjust_hash_size_dispatch(netmsg_t nmsg);
 
 SYSCTL_NODE(_net_inet_ip, OID_AUTO, fw_basic,
 		CTLFLAG_RW, 0, "Firewall Basic");
-SYSCTL_PROC(_net_inet_ip_fw_basic, OID_AUTO, state_hash_size,
-		CTLTYPE_INT | CTLFLAG_RW, &state_hash_size, 0,
-		ip_fw3_sysctl_adjust_hash_size, "I", "Adjust hash size");
 
 SYSCTL_INT(_net_inet_ip_fw_basic, OID_AUTO, state_lifetime, CTLFLAG_RW,
 		&state_lifetime, 0, "default life time");
@@ -116,62 +109,6 @@ SYSCTL_INT(_net_inet_ip_fw_basic, OID_AUTO, state_count_max, CTLFLAG_RW,
 
 static struct ip_fw *lookup_next_rule(struct ip_fw *me);
 static int iface_match(struct ifnet *ifp, ipfw_insn_if *cmd);
-static __inline int hash_packet(struct ipfw_flow_id *id);
-
-static int
-ip_fw3_sysctl_adjust_hash_size(SYSCTL_HANDLER_ARGS)
-{
-	int error, value = 0;
-
-	state_hash_size_old = state_hash_size;
-	value = state_hash_size;
-	error = sysctl_handle_int(oidp, &value, 0, req);
-	if (error || !req->newptr) {
-		goto back;
-	}
-	/*
-	 * Make sure we have a power of 2 and
-	 * do not allow more than 64k entries.
-	 */
-	error = EINVAL;
-	if (value <= 1 || value > 65536) {
-		goto back;
-	}
-	if ((value & (value - 1)) != 0) {
-		goto back;
-	}
-
-	error = 0;
-	if (state_hash_size != value) {
-		state_hash_size = value;
-
-		struct netmsg_base *msg, the_msg;
-		msg = &the_msg;
-		bzero(msg,sizeof(struct netmsg_base));
-
-		netmsg_init(msg, NULL, &curthread->td_msgport,
-				0, adjust_hash_size_dispatch);
-		netisr_domsg(msg, 0);
-	}
-back:
-	return error;
-}
-
-void
-adjust_hash_size_dispatch(netmsg_t nmsg)
-{
-	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
-}
-
-static __inline int
-hash_packet(struct ipfw_flow_id *id)
-{
-	uint32_t i;
-	i = (id->proto) ^ (id->dst_ip) ^ (id->src_ip) ^
-		(id->dst_port) ^ (id->src_port);
-	i &= state_hash_size - 1;
-	return i;
-}
 
 static struct ip_fw *
 lookup_next_rule(struct ip_fw *me)
