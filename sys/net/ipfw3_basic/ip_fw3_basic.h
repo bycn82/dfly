@@ -96,9 +96,9 @@ void	check_dst_n_port(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 
 /* prototype of the utility functions */
 int 	match_state(ipfw_insn *cmd, struct ipfw_flow_id *fid,
-		struct ip_fw_state *state);
+		struct ipfw3_state *state);
 int 	count_match_state(ipfw_insn *cmd, struct ipfw_flow_id *fid,
-		struct ip_fw_state *state, int *count);
+		struct ipfw3_state *state, int *count);
 
 #endif
 

@@ -1426,7 +1426,7 @@ ip_fw3_ctl_add_rule(struct sockopt *sopt)
 }
 
 static void *
-ip_fw3_copy_state(struct ip_fw_state *state,
+ip_fw3_copy_state(struct ipfw3_state *state,
 		struct ipfw_ioc_state *ioc_state, int cpuid)
 {
 	ioc_state->pcnt = state->pcnt;
@@ -1514,7 +1514,7 @@ ip_fw3_ctl_get_rules(struct sockopt *sopt)
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ipfw3_state_context *state_ctx;
 	struct ip_fw *rule;
-	struct ip_fw_state *state;
+	struct ipfw3_state *state;
 	void *bp;
 	size_t size;
 	int i, j, state_count = 0;
