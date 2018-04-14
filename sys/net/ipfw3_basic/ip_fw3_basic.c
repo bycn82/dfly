@@ -106,6 +106,36 @@ SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO,
 SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_count_max, CTLFLAG_RW,
 		&state_count_max, 0, "maximum of state");
 
+RB_PROTOTYPE(fw3_state_tree, ipfw3_state, entries, ip_fw3_state_cmp);
+RB_GENERATE(fw3_state_tree, ipfw3_state, entries, ip_fw3_state_cmp);
+
+
+int
+ip_fw3_state_cmp(struct ipfw3_state *s1, struct ipfw3_state *s2)
+{
+	if (s1->src_addr > s2->src_addr)
+		return 1;
+	if (s1->src_addr < s2->src_addr)
+		return -1;
+
+	if (s1->dst_addr > s2->dst_addr)
+		return 1;
+	if (s1->dst_addr < s2->dst_addr)
+		return -1;
+
+	if (s1->src_port > s2->src_port)
+		return 1;
+	if (s1->src_port < s2->src_port)
+		return -1;
+
+	if (s1->dst_port > s2->dst_port)
+		return 1;
+	if (s1->dst_port < s2->dst_port)
+		return -1;
+
+	return 0;
+}
+
 static struct ip_fw *lookup_next_rule(struct ip_fw *me);
 static int iface_match(struct ifnet *ifp, ipfw_insn_if *cmd);
 
@@ -670,7 +700,12 @@ static void
 ipfw_basic_init_dispatch(netmsg_t msg)
 {
 	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
-	RB_INIT(&state_ctx->fw3_states);
+	RB_INIT(&state_ctx->rb_icmp_in);
+	RB_INIT(&state_ctx->rb_icmp_out);
+	RB_INIT(&state_ctx->rb_tcp_in);
+	RB_INIT(&state_ctx->rb_tcp_out);
+	RB_INIT(&state_ctx->rb_udp_in);
+	RB_INIT(&state_ctx->rb_udp_out);
 	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
 }
 

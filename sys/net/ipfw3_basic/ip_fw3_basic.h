@@ -80,8 +80,6 @@ enum ipfw_basic_opcodes {
 		(state->timestamp + state->lifetime) < time_second) ||	\
 		((state->expiry != 0) && (state->expiry < time_second))
 
-#define IPFW_BASIC_LOADED   (ip_fw_basic_loaded)
-
 
 
 
@@ -99,11 +97,17 @@ struct ipfw3_state {
 	time_t			timestamp;
 };
 
+int 	ip_fw3_state_cmp(struct ipfw3_state *s1, struct ipfw3_state *s2);
 RB_HEAD(fw3_state_tree, ipfw3_state);
 
 /* place to hold the states */
 struct ipfw3_state_context {
-	struct fw3_state_tree	fw3_states;
+	struct fw3_state_tree	rb_tcp_in;
+	struct fw3_state_tree	rb_tcp_out;
+	struct fw3_state_tree	rb_udp_in;
+	struct fw3_state_tree	rb_udp_out;
+	struct fw3_state_tree	rb_icmp_in;
+	struct fw3_state_tree	rb_icmp_out;
 };
 
 typedef void ipfw_sync_send_state_t(struct ipfw3_state *, int cpu, int hash);
