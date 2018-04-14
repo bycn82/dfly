@@ -97,7 +97,7 @@ struct nat_state {
 };
 #define LEN_NAT_STATE sizeof(struct nat_state)
 
-int 	nat_state_cmp(struct nat_state *s1, struct nat_state *s2);
+int 	ip_fw3_nat_state_cmp(struct nat_state *s1, struct nat_state *s2);
 
 RB_HEAD(state_tree, nat_state);
 
