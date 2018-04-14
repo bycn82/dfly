@@ -173,7 +173,7 @@ SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, static_count, CTLFLAG_RD,
 filter_func filter_funcs[MAX_MODULE][MAX_OPCODE_PER_MODULE];
 struct ipfw3_module fw3_modules[MAX_MODULE];
 struct ipfw3_context *fw3_ctx[MAXCPU];
-struct ipfw_sync_context sync_ctx;
+struct ipfw3_sync_context fw3_sync_ctx;
 static int ipfw_ctl(struct sockopt *sopt);
 
 

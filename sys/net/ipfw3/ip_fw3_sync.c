@@ -78,10 +78,12 @@
 #include <net/ipfw3/ip_fw.h>
 #include <net/ipfw3/ip_fw3_sync.h>
 
+#define LEN_IN_ADDR		sizeof(struct in_addr)
+
 MALLOC_DEFINE(M_IPFW3_SYNC, "IPFW3_SYNC", "mem for ipfw3sync");
 
 extern struct ipfw3_context *fw3_ctx[MAXCPU];
-extern struct ipfw_sync_context sync_ctx;
+extern struct ipfw3_sync_context fw3_sync_ctx;
 ipfw_sync_send_state_t *ipfw_sync_send_state_prt = NULL;
 ipfw_sync_install_state_t *ipfw_sync_install_state_prt = NULL;
 
@@ -91,21 +93,21 @@ ipfw_sync_install_state_t *ipfw_sync_install_state_prt = NULL;
 int
 ipfw_ctl_sync_show_conf(struct sockopt *sopt)
 {
-	struct ipfw_ioc_sync_context *tmp_sync_ctx;
+	struct ipfw3_ioc_sync_context *tmp_sync_ctx;
 	int size;
 
-	size = 3 * sizeof(int) + sync_ctx.count * sizeof(struct ipfw_sync_edge);
+	size = 3 * sizeof(int) + fw3_sync_ctx.count * LEN_SYNC_EDGE;
 	if (sopt->sopt_valsize < size) {
 		/* sopt_val is not big enough */
 		bzero(sopt->sopt_val, sopt->sopt_valsize);
 		return 0;
 	}
-	tmp_sync_ctx = (struct ipfw_ioc_sync_context *)sopt->sopt_val;
-	tmp_sync_ctx->edge_port = sync_ctx.edge_port;
-	tmp_sync_ctx->hw_same = sync_ctx.hw_same;
-	tmp_sync_ctx->count = sync_ctx.count;
-	bcopy(sync_ctx.edges, tmp_sync_ctx->edges,
-			sync_ctx.count * sizeof(struct ipfw_sync_edge));
+	tmp_sync_ctx = (struct ipfw3_ioc_sync_context *)sopt->sopt_val;
+	tmp_sync_ctx->edge_port = fw3_sync_ctx.edge_port;
+	tmp_sync_ctx->hw_same = fw3_sync_ctx.hw_same;
+	tmp_sync_ctx->count = fw3_sync_ctx.count;
+	bcopy(fw3_sync_ctx.edges, tmp_sync_ctx->edges,
+			fw3_sync_ctx.count * LEN_SYNC_EDGE);
 	sopt->sopt_valsize = size;
 	return 0;
 }
@@ -118,7 +120,7 @@ ipfw_ctl_sync_show_status(struct sockopt *sopt)
 {
 	int *running;
 	running = (int *)sopt->sopt_val;
-	*running = sync_ctx.running;
+	*running = fw3_sync_ctx.running;
 	sopt->sopt_valsize = sizeof(int);
 	return 0;
 }
@@ -128,20 +130,20 @@ ipfw_ctl_sync_show_status(struct sockopt *sopt)
 int
 ipfw_ctl_sync_centre_conf(struct sockopt *sopt)
 {
-	struct ipfw_ioc_sync_centre *ioc_centre;
+	struct ipfw3_ioc_sync_centre *ioc_centre;
 	int size;
 
 	ioc_centre = sopt->sopt_val;
-	size = ioc_centre->count * sizeof(struct ipfw_sync_edge);
-	if (sync_ctx.count == 0) {
-		sync_ctx.edges = kmalloc(size, M_IPFW3_SYNC, M_NOWAIT | M_ZERO);
+	size = ioc_centre->count * LEN_SYNC_EDGE;
+	if (fw3_sync_ctx.count == 0) {
+		fw3_sync_ctx.edges = kmalloc(size, M_IPFW3_SYNC, M_NOWAIT | M_ZERO);
 	} else {
-		sync_ctx.edges = krealloc(sync_ctx.edges,
+		fw3_sync_ctx.edges = krealloc(fw3_sync_ctx.edges,
 				size, M_TEMP, M_WAITOK);
 	}
-	sync_ctx.count = ioc_centre->count;
-	bcopy(ioc_centre->edges, sync_ctx.edges,
-			ioc_centre->count * sizeof(struct ipfw_sync_edge));
+	fw3_sync_ctx.count = ioc_centre->count;
+	bcopy(ioc_centre->edges, fw3_sync_ctx.edges,
+			ioc_centre->count * LEN_SYNC_EDGE);
 	return 0;
 }
 
@@ -151,21 +153,21 @@ ipfw_ctl_sync_centre_conf(struct sockopt *sopt)
 int
 ipfw_ctl_sync_edge_conf(struct sockopt *sopt)
 {
-	struct ipfw_ioc_sync_edge *ioc_edge;
+	struct ipfw3_ioc_sync_edge *ioc_edge;
 	struct thread *td;
 	size_t size;
 	int error;
 
 	size = sopt->sopt_valsize;
 	ioc_edge = sopt->sopt_val;
-	if (size != sizeof(struct ipfw_ioc_sync_edge)) {
+	if (size != sizeof(struct ipfw3_ioc_sync_edge)) {
 		return EINVAL;
 	}
-	sync_ctx.edge_port = ioc_edge->port;
-	sync_ctx.hw_same = ioc_edge->hw_same;
+	fw3_sync_ctx.edge_port = ioc_edge->port;
+	fw3_sync_ctx.hw_same = ioc_edge->hw_same;
 
 	td = curthread->td_proc ? curthread : &thread0;
-	error = socreate(AF_INET, &sync_ctx.edge_sock,
+	error = socreate(AF_INET, &fw3_sync_ctx.edge_sock,
 			SOCK_DGRAM, IPPROTO_UDP, td);
 	if (error) {
 		kprintf("ipfw3sync edge socreate failed: %d\n", error);
@@ -184,15 +186,15 @@ sync_edge_socket_handler(void *dummy)
 	struct sockaddr *sa;
 	int error, flags, *type;
 
-	so = sync_ctx.edge_sock;
+	so = fw3_sync_ctx.edge_sock;
 	flags = MSG_FBLOCKING;
 
 	bzero(&sin, sizeof(struct sockaddr_in));
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(sync_ctx.edge_port);
-	sin.sin_len = sizeof(struct sockaddr_in);
+	sin.sin_port = htons(fw3_sync_ctx.edge_port);
+	sin.sin_len = LEN_IN_ADDR;
 	sa = (struct sockaddr *)&sin;
-	while (sync_ctx.running & 1) {
+	while (fw3_sync_ctx.running & 1) {
 		sbinit(&sio, 1000000000);
 		error = so_pru_soreceive(so, NULL, NULL, &sio, NULL, &flags);
 		if (error)
@@ -216,8 +218,8 @@ sync_edge_socket_handler(void *dummy)
 			kprintf("Error ignore\n");
 		}
 	}
-	soshutdown(sync_ctx.edge_sock, SHUT_RD);
-	sofree(sync_ctx.edge_sock);
+	soshutdown(fw3_sync_ctx.edge_sock, SHUT_RD);
+	sofree(fw3_sync_ctx.edge_sock);
 	kthread_exit();
 }
 
@@ -228,16 +230,16 @@ ipfw_ctl_sync_edge_start(struct sockopt *sopt)
 	struct thread *td;
 	int error;
 
-	if (sync_ctx.running & 1) {
+	if (fw3_sync_ctx.running & 1) {
 		return 0;
 	}
 	td = curthread->td_proc ? curthread : &thread0;
 	bzero(&sin, sizeof(struct sockaddr_in));
 	sin.sin_family = AF_INET;
 	sin.sin_len = sizeof(struct sockaddr_in);
-	sin.sin_port = htons(sync_ctx.edge_port);
+	sin.sin_port = htons(fw3_sync_ctx.edge_port);
 	sin.sin_addr.s_addr = INADDR_ANY;
-	error = sobind(sync_ctx.edge_sock, (struct sockaddr *)&sin, td);
+	error = sobind(fw3_sync_ctx.edge_sock, (struct sockaddr *)&sin, td);
 	if (error) {
 		if (error != EADDRINUSE) {
 			kprintf("ipfw3sync edge sobind failed: %d\n", error);
@@ -247,10 +249,10 @@ ipfw_ctl_sync_edge_start(struct sockopt *sopt)
 		return (error);
 	}
 
-	sync_ctx.running |= 1;
-	soreference(sync_ctx.edge_sock);
+	fw3_sync_ctx.running |= 1;
+	soreference(fw3_sync_ctx.edge_sock);
 	error = kthread_create(sync_edge_socket_handler, NULL,
-			&sync_ctx.edge_td, "sync_edge_thread");
+			&fw3_sync_ctx.edge_td, "sync_edge_thread");
 	if (error) {
 		panic("sync_edge_socket_handler:error %d",error);
 	}
@@ -262,28 +264,28 @@ ipfw_ctl_sync_centre_start(struct sockopt *sopt)
 {
 	struct sockaddr_in sin;
 	struct thread *td;
-	struct ipfw_sync_edge *edge;
+	struct ipfw3_sync_edge *edge;
 	int error, i;
 
-	sync_ctx.running |= 2;
+	fw3_sync_ctx.running |= 2;
 	td = curthread->td_proc ? curthread : &thread0;
 
-	for (i = 0; i < sync_ctx.count; i++) {
-		error = socreate(AF_INET, &sync_ctx.centre_socks[i],
+	for (i = 0; i < fw3_sync_ctx.count; i++) {
+		error = socreate(AF_INET, &fw3_sync_ctx.centre_socks[i],
 				SOCK_DGRAM, IPPROTO_UDP, td);
 		if (error) {
 			kprintf("ipfw3sync centre socreate failed: %d\n",
 					error);
 			return error;
 		}
-		edge = sync_ctx.edges;
+		edge = fw3_sync_ctx.edges;
 
 		bzero(&sin, sizeof(struct sockaddr_in));
 		sin.sin_family = AF_INET;
 		sin.sin_port = htons(edge->port);
 		sin.sin_addr.s_addr = edge->addr;
 		sin.sin_len = sizeof(struct sockaddr_in);
-		error = soconnect(sync_ctx.centre_socks[i],
+		error = soconnect(fw3_sync_ctx.centre_socks[i],
 				(struct sockaddr *)&sin, td, TRUE);
 		if (error) {
 			kprintf("ipfw3sync: centre soconnect failed: %d\n",
@@ -313,7 +315,7 @@ ipfw_ctl_sync_centre_test(struct sockopt *sopt)
 		kprintf("ipfw3sync: invalid centre test parameter\n");
 		return -1;
 	}
-	if ((sync_ctx.running & 2) == 0) {
+	if ((fw3_sync_ctx.running & 2) == 0) {
 		kprintf("ipfw3sync: centre not running\n");
 		return -1;
 	}
@@ -332,8 +334,8 @@ ipfw_ctl_sync_centre_test(struct sockopt *sopt)
 	m->m_pkthdr.len = len;
 
 	td = curthread->td_proc ? curthread : &thread0;
-	for (i = 0; i < sync_ctx.count; i++) {
-		error = so_pru_sosend(sync_ctx.centre_socks[i],
+	for (i = 0; i < fw3_sync_ctx.count; i++) {
+		error = so_pru_sosend(fw3_sync_ctx.centre_socks[i],
 				NULL, NULL, m, NULL, 0 ,td);
 		if (error) {
 			kprintf("ipfw3sync: centre sosend failed: %d\n", error);
@@ -346,9 +348,9 @@ ipfw_ctl_sync_centre_test(struct sockopt *sopt)
 int
 ipfw_ctl_sync_edge_stop(struct sockopt *sopt)
 {
-	if (sync_ctx.running & 1) {
-		sync_ctx.running &= 2;
-		soclose(sync_ctx.edge_sock, 0);
+	if (fw3_sync_ctx.running & 1) {
+		fw3_sync_ctx.running &= 2;
+		soclose(fw3_sync_ctx.edge_sock, 0);
 	}
 	return 0;
 }
@@ -358,10 +360,10 @@ ipfw_ctl_sync_centre_stop(struct sockopt *sopt)
 {
 	int i;
 
-	if (sync_ctx.running & 2) {
-		sync_ctx.running &= 1;
-		for (i = 0; i < sync_ctx.count; i++) {
-			soclose(sync_ctx.centre_socks[i], 0);
+	if (fw3_sync_ctx.running & 2) {
+		fw3_sync_ctx.running &= 1;
+		for (i = 0; i < fw3_sync_ctx.count; i++) {
+			soclose(fw3_sync_ctx.centre_socks[i], 0);
 		}
 	}
 	return 0;
@@ -459,8 +461,8 @@ ipfw_sync_send_state(struct ip_fw_state *state, int cpu, int hash)
 	m->m_pkthdr.len = len;
 
 	td = curthread->td_proc ? curthread : &thread0;
-	for (i = 0; i < sync_ctx.count; i++) {
-		error = so_pru_sosend(sync_ctx.centre_socks[i],
+	for (i = 0; i < fw3_sync_ctx.count; i++) {
+		error = so_pru_sosend(fw3_sync_ctx.centre_socks[i],
 				NULL, NULL, m, NULL, 0 ,td);
 		if (error) {
 			kprintf("ipfw3sync: centre sosend failed: %d\n", error);
@@ -478,18 +480,18 @@ ipfw3_sync_modevent(int type)
 			ipfw_sync_send_state_prt = ipfw_sync_send_state;
 			break;
 		case MOD_UNLOAD:
-			if (sync_ctx.edges != NULL) {
-				kfree(sync_ctx.edges, M_IPFW3_SYNC);
+			if (fw3_sync_ctx.edges != NULL) {
+				kfree(fw3_sync_ctx.edges, M_IPFW3_SYNC);
 			}
-			if (sync_ctx.running & 1) {
-				sync_ctx.running = 0;
-				soclose(sync_ctx.edge_sock, 0);
-				sync_ctx.edge_td = NULL;
+			if (fw3_sync_ctx.running & 1) {
+				fw3_sync_ctx.running = 0;
+				soclose(fw3_sync_ctx.edge_sock, 0);
+				fw3_sync_ctx.edge_td = NULL;
 			}
-			if (sync_ctx.running & 2) {
+			if (fw3_sync_ctx.running & 2) {
 				int i;
-				for (i = 0; i < sync_ctx.count; i++) {
-					soclose(sync_ctx.centre_socks[i], 0);
+				for (i = 0; i < fw3_sync_ctx.count; i++) {
+					soclose(fw3_sync_ctx.centre_socks[i], 0);
 				}
 			}
 			break;

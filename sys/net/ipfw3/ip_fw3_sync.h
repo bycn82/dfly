@@ -43,34 +43,35 @@
 #define SYNC_TYPE_SEND_NAT 2  /* syncing nat */
 
 
-struct ipfw_sync_edge {
+struct ipfw3_sync_edge {
 	in_addr_t addr;
 	u_short port;
 };
+#define LEN_SYNC_EDGE sizeof(struct ipfw3_sync_edge)
 
-struct ipfw_ioc_sync_context {
+struct ipfw3_ioc_sync_context {
 	int edge_port; /* edge listening port */
 	int hw_same; /* duplicate to all CPU when hardware different */
 	int count; /* count of edge */
-	struct ipfw_sync_edge edges[0]; /* edge */
+	struct ipfw3_sync_edge edges[0]; /* edge */
 };
 
-struct ipfw_ioc_sync_centre {
+struct ipfw3_ioc_sync_centre {
 	int count; /* count of edge */
-	struct ipfw_sync_edge edges[0]; /* edge */
+	struct ipfw3_sync_edge edges[0]; /* edge */
 };
 
-struct ipfw_ioc_sync_edge {
+struct ipfw3_ioc_sync_edge {
 	int port;
 	int hw_same;
 };
 
-struct ipfw_sync_context{
+struct ipfw3_sync_context{
 	int edge_port; /* edge listening port */
 	int hw_same; /* duplicate to all CPU when hardware different */
 	int count; /* count of edge */
 	int running; /* edge 01, centre 10 */
-	struct ipfw_sync_edge *edges; /* edge */
+	struct ipfw3_sync_edge *edges; /* edge */
 	struct thread *edge_td; /* edge handler thread */
 	struct socket *edge_sock; /* edge sock */
 	struct socket *centre_socks[MAX_EDGES]; /* centre socks */
@@ -102,7 +103,7 @@ struct cmd_send_nat {
 
 struct netmsg_sync {
 	struct netmsg_base base;
-	struct ipfw_ioc_sync_centre *centre;
+	struct ipfw3_ioc_sync_centre *centre;
 	int retval;
 };
 

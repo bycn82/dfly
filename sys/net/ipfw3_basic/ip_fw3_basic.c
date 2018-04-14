@@ -72,7 +72,7 @@
 #include "ip_fw3_basic.h"
 
 extern struct ipfw3_context		*fw3_ctx[MAXCPU];
-extern struct ipfw_sync_context 	sync_ctx;
+extern struct ipfw3_sync_context 	fw3_sync_ctx;
 extern int 				sysctl_var_fw3_verbose;
 extern ipfw_basic_delete_state_t 	*ipfw_basic_flush_state_prt;
 extern ipfw_basic_append_state_t 	*ipfw_basic_append_state_prt;
@@ -332,7 +332,7 @@ install_state(struct ip_fw *rule, ipfw_insn *cmd, struct ip_fw_args *args)
 	state_ctx->last = state;
 	state_ctx->count++;
 
-	if (sync_ctx.running & 2) {
+	if (fw3_sync_ctx.running & 2) {
 		ipfw_sync_send_state_prt(state, mycpuid, hash);
 	}
 	return state;

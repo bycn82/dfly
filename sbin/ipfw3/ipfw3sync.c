@@ -81,7 +81,7 @@
 void
 sync_config_edge(int ac, char *av[])
 {
-	struct ipfw_ioc_sync_edge ioc_edge;
+	struct ipfw3_ioc_sync_edge ioc_edge;
 	NEXT_ARG;
 	if (isdigit(**av)) {
 		ioc_edge.port = atoi(*av);
@@ -106,8 +106,8 @@ sync_config_edge(int ac, char *av[])
 void
 sync_config_centre(int ac, char *av[])
 {
-	struct ipfw_ioc_sync_centre *centre;
-	struct ipfw_sync_edge *edge;
+	struct ipfw3_ioc_sync_centre *centre;
+	struct ipfw3_sync_edge *edge;
 	struct in_addr addr;
 	char *tok;
 	char *str;
@@ -119,9 +119,9 @@ sync_config_centre(int ac, char *av[])
 	tok = strtok(*av, ",");
 	len = sizeof(int);
 
-	data_len = len + step * sizeof(struct ipfw_sync_edge);
+	data_len = len + step * LEN_SYNC_EDGE;
 	data = malloc(data_len);
-	centre = (struct ipfw_ioc_sync_centre *)data;
+	centre = (struct ipfw3_ioc_sync_centre *)data;
 	edge = centre->edges;
 	while (tok != NULL) {
 		str = strchr(tok,':');
@@ -139,7 +139,7 @@ sync_config_centre(int ac, char *av[])
 		edge->addr = addr.s_addr;
 		if (count >= step) {
 			step += 10;
-			data_len = len + step * sizeof(struct ipfw_sync_edge);
+			data_len = len + step * LEN_SYNC_EDGE;
 			if ((data = realloc(data, data_len)) == NULL) {
 				err(EX_OSERR, "realloc in config sync centre");
 			}
@@ -153,7 +153,7 @@ sync_config_centre(int ac, char *av[])
 		err(EX_OSERR,"too much edges");
 	}
 	centre->count = count;
-	len += count * sizeof(struct ipfw_sync_edge);
+	len += count * LEN_SYNC_EDGE;
 	if(do_set_x(IP_FW_SYNC_CENTRE_CONF, data, len) < 0) {
 		err(EX_UNAVAILABLE, "do_set_x(IP_FW_SYNC_CENTRE_CONF)");
 	}
@@ -181,14 +181,14 @@ sync_show_config(int ac, char *av[])
 			err(EX_OSERR, "getsockopt(IP_FW_SYNC_SHOW_CONF)");
 		}
 	}
-	struct ipfw_ioc_sync_context *sync_ctx;
-	sync_ctx = (struct ipfw_ioc_sync_context *)data;
+	struct ipfw3_ioc_sync_context *sync_ctx;
+	sync_ctx = (struct ipfw3_ioc_sync_context *)data;
 	if (sync_ctx->edge_port != 0) {
 		printf("ipfw3sync edge on %d %s\n", sync_ctx->edge_port,
 				sync_ctx->hw_same == 1 ? "all" : "");
 	}
 	if (sync_ctx->count > 0) {
-		struct ipfw_sync_edge *edge;
+		struct ipfw3_sync_edge *edge;
 		int i;
 
 		edge = sync_ctx->edges;
@@ -200,7 +200,6 @@ sync_show_config(int ac, char *av[])
 			edge++;
 		}
 	}
-
 }
 
 void
