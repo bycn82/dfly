@@ -88,11 +88,9 @@ extern ipfw_basic_append_state_t 	*ipfw_basic_append_state_prt;
 extern ipfw_sync_send_state_t 		*ipfw_sync_send_state_prt;
 extern ipfw_sync_install_state_t 	*ipfw_sync_install_state_prt;
 
-static struct netmsg_base 	ipfw_timeout_netmsg; /* schedule ipfw timeout */
-static struct callout 		ipfw_tick_callout;
-static int 	ip_fw_basic_loaded;
+static struct callout 		ip_fw3_basic_cleanup_callout;
+static int 	sysctl_var_basic_cleanup_interval = 1;
 static int 	state_lifetime = 20;
-static int	state_expiry_check_interval = 10;
 static int 	state_count_max = 4096;
 static int 	state_hash_size_old = 0;
 static int 	state_hash_size = 4096;
@@ -110,8 +108,8 @@ SYSCTL_PROC(_net_inet_ip_fw_basic, OID_AUTO, state_hash_size,
 SYSCTL_INT(_net_inet_ip_fw_basic, OID_AUTO, state_lifetime, CTLFLAG_RW,
 		&state_lifetime, 0, "default life time");
 SYSCTL_INT(_net_inet_ip_fw_basic, OID_AUTO,
-		state_expiry_check_interval, CTLFLAG_RW,
-		&state_expiry_check_interval, 0,
+		sysctl_var_basic_cleanup_interval, CTLFLAG_RW,
+		&sysctl_var_basic_cleanup_interval, 0,
 		"default state expiry check interval");
 SYSCTL_INT(_net_inet_ip_fw_basic, OID_AUTO, state_count_max, CTLFLAG_RW,
 		&state_count_max, 0, "maximum of state");
@@ -711,69 +709,40 @@ ipfw_basic_flush_state(struct ip_fw *rule)
 
 }
 
-/*
- * clean up expired state in every tick
- */
+
 static void
-ipfw_cleanup_expired_state(netmsg_t nmsg)
+ip_fw3_basic_cleanup_func_dispatch(netmsg_t nmsg)
 {
+	/* TODO */
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 
 static void
-ipfw_tick(void *dummy __unused)
+ip_fw3_basic_cleanup_func(void *dummy __unused)
 {
-	struct lwkt_msg *lmsg = &ipfw_timeout_netmsg.lmsg;
-	KKASSERT(mycpuid == IPFW_CFGCPUID);
-
-	crit_enter();
-	KKASSERT(lmsg->ms_flags & MSGF_DONE);
-	if (IPFW_BASIC_LOADED) {
-		lwkt_sendmsg_oncpu(IPFW_CFGPORT, lmsg);
-		/* ipfw_timeout_netmsg's handler reset this callout */
-	}
-	crit_exit();
-}
-
-static void
-ipfw_tick_dispatch(netmsg_t nmsg)
-{
-	IPFW_ASSERT_CFGPORT(&curthread->td_msgport);
-	KKASSERT(IPFW_BASIC_LOADED);
-
-	/* Reply ASAP */
-	crit_enter();
-	lwkt_replymsg(&nmsg->lmsg, 0);
-	crit_exit();
-
-	callout_reset(&ipfw_tick_callout,
-			state_expiry_check_interval * hz, ipfw_tick, NULL);
-
 	struct netmsg_base msg;
 	netmsg_init(&msg, NULL, &curthread->td_msgport, 0,
-			ipfw_cleanup_expired_state);
+			ip_fw3_basic_cleanup_func_dispatch);
 	netisr_domsg(&msg, 0);
+
+	callout_reset(&ip_fw3_basic_cleanup_callout,
+			sysctl_var_basic_cleanup_interval * hz,
+			ip_fw3_basic_cleanup_func, NULL);
 }
 
 static void
-ipfw_basic_init_dispatch(netmsg_t nmsg)
+ipfw_basic_init_dispatch(netmsg_t msg)
 {
-	IPFW_ASSERT_CFGPORT(&curthread->td_msgport);
-	KKASSERT(IPFW3_LOADED);
-
-	int error = 0;
-	callout_init_mp(&ipfw_tick_callout);
-	netmsg_init(&ipfw_timeout_netmsg, NULL, &netisr_adone_rport,
-			MSGF_DROPABLE | MSGF_PRIORITY, ipfw_tick_dispatch);
-	callout_reset(&ipfw_tick_callout,
-			state_expiry_check_interval * hz, ipfw_tick, NULL);
-	lwkt_replymsg(&nmsg->lmsg, error);
-	ip_fw_basic_loaded=1;
+	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
+	RB_INIT(&state_ctx->fw3_states);
+	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
 }
 
 static int
 ipfw_basic_init(void)
 {
+	struct netmsg_base msg;
+
 	ipfw_basic_flush_state_prt = ipfw_basic_flush_state;
 	ipfw_basic_append_state_prt = ipfw_basic_add_state;
 	ipfw_sync_install_state_prt = ipfw_sync_install_state;
@@ -836,39 +805,24 @@ ipfw_basic_init(void)
 	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_DST_N_PORT, (filter_func)check_dst_n_port);
 
-	int cpu;
-	struct ipfw3_context *ctx;
-
-	for (cpu = 0; cpu < ncpus; cpu++) {
-		ctx = fw3_ctx[cpu];
-		if (ctx != NULL) {
-			ctx->state_ctx = kmalloc(state_hash_size *
-					sizeof(struct ipfw3_state_context),
-					M_IPFW3_BASIC, M_WAITOK | M_ZERO);
-			ctx->state_hash_size = state_hash_size;
-		}
-	}
-
-	struct netmsg_base smsg;
-	netmsg_init(&smsg, NULL, &curthread->td_msgport,
+	netmsg_init(&msg, NULL, &curthread->td_msgport,
 			0, ipfw_basic_init_dispatch);
-	lwkt_domsg(IPFW_CFGPORT, &smsg.lmsg, 0);
+	netisr_domsg(&msg, 0);
+
+
+	callout_init_mp(&ip_fw3_basic_cleanup_callout);
+	callout_reset(&ip_fw3_basic_cleanup_callout,
+			sysctl_var_basic_cleanup_interval * hz,
+			ip_fw3_basic_cleanup_func,
+			NULL);
 	return 0;
 }
 
 static void
-ipfw_basic_stop_dispatch(netmsg_t nmsg)
+ipfw_basic_stop_dispatch(netmsg_t msg)
 {
-	IPFW_ASSERT_CFGPORT(&curthread->td_msgport);
-	KKASSERT(IPFW3_LOADED);
-	int error = 0;
-	callout_stop(&ipfw_tick_callout);
-	netmsg_service_sync();
-	crit_enter();
-	lwkt_dropmsg(&ipfw_timeout_netmsg.lmsg);
-	crit_exit();
-	lwkt_replymsg(&nmsg->lmsg, error);
-	ip_fw_basic_loaded=0;
+	/* TODO */
+	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
 }
 
 static int
