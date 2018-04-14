@@ -153,7 +153,7 @@ back:
 void
 adjust_hash_size_dispatch(netmsg_t nmsg)
 {
-	struct ipfw_state_context *state_ctx;
+	struct ipfw3_state_context *state_ctx;
 	struct ip_fw_state *the_state, *state;
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	int i;
@@ -172,7 +172,7 @@ adjust_hash_size_dispatch(netmsg_t nmsg)
 	}
 	kfree(ctx->state_ctx,M_IPFW3_BASIC);
 	ctx->state_ctx = kmalloc(state_hash_size *
-				sizeof(struct ipfw_state_context),
+				sizeof(struct ipfw3_state_context),
 				M_IPFW3_BASIC, M_WAITOK | M_ZERO);
 	ctx->state_hash_size = state_hash_size;
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
@@ -269,7 +269,7 @@ lookup_state(struct ip_fw_args *args, ipfw_insn *cmd, int *limited, int all)
 {
 	struct ip_fw_state *state = NULL;
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
-	struct ipfw_state_context *state_ctx;
+	struct ipfw3_state_context *state_ctx;
 	int start, end, i, count = 0;
 
 	if (all && cmd->arg1) {
@@ -311,7 +311,7 @@ install_state(struct ip_fw *rule, ipfw_insn *cmd, struct ip_fw_args *args)
 {
 	struct ip_fw_state *state;
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
-	struct ipfw_state_context *state_ctx;
+	struct ipfw3_state_context *state_ctx;
 	int hash = hash_packet(&args->f_id);
 	state_ctx = &ctx->state_ctx[hash];
 	state = kmalloc(sizeof(struct ip_fw_state),
@@ -343,7 +343,7 @@ ipfw_sync_install_state(struct cmd_send_state *cmd)
 {
         struct ip_fw_state *state;
         struct ipfw3_context *ctx = fw3_ctx[cmd->cpu];
-        struct ipfw_state_context *state_ctx;
+        struct ipfw3_state_context *state_ctx;
         struct ip_fw *rule;
 
         state_ctx = &ctx->state_ctx[cmd->hash];
@@ -869,7 +869,7 @@ ipfw_basic_add_state(struct ipfw_ioc_state *ioc_state)
 {
 	struct ip_fw_state *state;
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
-	struct ipfw_state_context *state_ctx;
+	struct ipfw3_state_context *state_ctx;
 	state_ctx = &ctx->state_ctx[hash_packet(&(ioc_state->flow_id))];
 	state = kmalloc(sizeof(struct ip_fw_state),
 			M_IPFW3_BASIC, M_WAITOK | M_ZERO);
@@ -910,7 +910,7 @@ ipfw_basic_add_state(struct ipfw_ioc_state *ioc_state)
 static void
 ipfw_basic_flush_state(struct ip_fw *rule)
 {
-	struct ipfw_state_context *state_ctx;
+	struct ipfw3_state_context *state_ctx;
 	struct ip_fw_state *state,*the_state, *prev_state;
 	struct ipfw3_context *ctx;
 	int i;
@@ -952,7 +952,7 @@ ipfw_cleanup_expired_state(netmsg_t nmsg)
 {
 	struct ip_fw_state *state,*the_state,*prev_state;
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
-	struct ipfw_state_context *state_ctx;
+	struct ipfw3_state_context *state_ctx;
 	int i;
 
 	for (i = 0; i < state_hash_size; i++) {
@@ -1109,7 +1109,7 @@ ipfw_basic_init(void)
 		ctx = fw3_ctx[cpu];
 		if (ctx != NULL) {
 			ctx->state_ctx = kmalloc(state_hash_size *
-					sizeof(struct ipfw_state_context),
+					sizeof(struct ipfw3_state_context),
 					M_IPFW3_BASIC, M_WAITOK | M_ZERO);
 			ctx->state_hash_size = state_hash_size;
 		}
@@ -1141,7 +1141,7 @@ static int
 ipfw_basic_stop(void)
 {
 	int cpu,i;
-	struct ipfw_state_context *state_ctx;
+	struct ipfw3_state_context *state_ctx;
 	struct ip_fw_state *state,*the_state;
 	struct ipfw3_context *ctx;
 	if (ip_fw3_unregister_module(MODULE_BASIC_ID) ==0 ) {

@@ -125,7 +125,7 @@ int ip_fw3_ctl_sync_centre_stop(struct sockopt *sopt);
 int ip_fw3_ctl_sync_edge_clear(struct sockopt *sopt);
 int ip_fw3_ctl_sync_centre_clear(struct sockopt *sopt);
 int ip_fw3_ctl_sync_sockopt(struct sockopt *sopt);
-void ip_fw3_sync_send_state(struct ip_fw_state *state, int cpu, int hash);
+void ip_fw3_sync_send_state(struct ipfw3_state *state, int cpu, int hash);
 
 #endif /* _KERNEL */
 #endif /* _IP_FW3_SYNC_H_ */

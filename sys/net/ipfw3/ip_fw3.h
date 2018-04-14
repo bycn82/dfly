@@ -267,8 +267,8 @@ struct ipfw_flow_id {
 	uint8_t		flags;	/* protocol-specific flags */
 };
 
-struct ip_fw_state {
-	struct ip_fw_state	*next;
+struct ipfw3_state {
+	struct ipfw3_state	*next;
 	struct ipfw_flow_id	flow_id;
 	struct ip_fw	*stub;
 
@@ -360,16 +360,16 @@ extern ip_fw_dn_io_t	*ip_fw_dn_io_ptr;
 struct ipfw3_context {
 	struct ip_fw	*ipfw_rule_chain;		/* list of rules*/
 	struct ip_fw	*ipfw_default_rule;	 /* default rule */
-	struct ipfw_state_context *state_ctx;
+	struct ipfw3_state_context *state_ctx;
 	struct ipfw_table_context *table_ctx;
 	uint16_t		state_hash_size;
 	uint32_t		ipfw_set_disable;
 };
 
 /* place to hold the states */
-struct ipfw_state_context {
-	struct ip_fw_state *state;
-	struct ip_fw_state *last;
+struct ipfw3_state_context {
+	struct ipfw3_state *state;
+	struct ipfw3_state *last;
 	int	count;
 };
 
@@ -509,7 +509,7 @@ typedef struct _ip_fw_x_header {
 
 typedef void ipfw_basic_delete_state_t(struct ip_fw *);
 typedef void ipfw_basic_append_state_t(struct ipfw_ioc_state *);
-typedef void ipfw_sync_send_state_t(struct ip_fw_state *, int cpu, int hash);
+typedef void ipfw_sync_send_state_t(struct ipfw3_state *, int cpu, int hash);
 
 /* IP_FW3 opcodes */
 

@@ -1512,7 +1512,7 @@ static int
 ip_fw3_ctl_get_rules(struct sockopt *sopt)
 {
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
-	struct ipfw_state_context *state_ctx;
+	struct ipfw3_state_context *state_ctx;
 	struct ip_fw *rule;
 	struct ip_fw_state *state;
 	void *bp;

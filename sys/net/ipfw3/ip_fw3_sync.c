@@ -433,7 +433,7 @@ ip_fw3_ctl_sync_sockopt(struct sockopt *sopt)
 }
 
 void
-ip_fw3_sync_send_state(struct ip_fw_state *state, int cpu, int hash)
+ip_fw3_sync_send_state(struct ipfw3_state *state, int cpu, int hash)
 {
 	struct mbuf *m;
 	struct thread *td;
