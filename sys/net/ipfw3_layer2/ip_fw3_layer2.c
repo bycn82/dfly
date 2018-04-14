@@ -173,19 +173,19 @@ check_mac_to_lookup(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 static int
 ipfw3_layer2_init(void)
 {
-	register_ipfw_module(MODULE_LAYER2_ID, MODULE_LAYER2_NAME);
-	register_ipfw_filter_funcs(MODULE_LAYER2_ID,
+	ip_fw3_register_module(MODULE_LAYER2_ID, MODULE_LAYER2_NAME);
+	ip_fw3_register_filter_funcs(MODULE_LAYER2_ID,
 			O_LAYER2_LAYER2, (filter_func)check_layer2);
-	register_ipfw_filter_funcs(MODULE_LAYER2_ID,
+	ip_fw3_register_filter_funcs(MODULE_LAYER2_ID,
 			O_LAYER2_MAC, (filter_func)check_mac);
-        register_ipfw_filter_funcs(MODULE_LAYER2_ID,
+        ip_fw3_register_filter_funcs(MODULE_LAYER2_ID,
 			O_LAYER2_MAC_SRC, (filter_func)check_mac_from);
-        register_ipfw_filter_funcs(MODULE_LAYER2_ID,
+        ip_fw3_register_filter_funcs(MODULE_LAYER2_ID,
 			O_LAYER2_MAC_DST, (filter_func)check_mac_to);
-        register_ipfw_filter_funcs(MODULE_LAYER2_ID,
+        ip_fw3_register_filter_funcs(MODULE_LAYER2_ID,
 			O_LAYER2_MAC_SRC_LOOKUP,
 			(filter_func)check_mac_from_lookup);
-        register_ipfw_filter_funcs(MODULE_LAYER2_ID,
+        ip_fw3_register_filter_funcs(MODULE_LAYER2_ID,
 			O_LAYER2_MAC_DST_LOOKUP,
 			(filter_func)check_mac_to_lookup);
 	return 0;
@@ -194,7 +194,7 @@ ipfw3_layer2_init(void)
 static int
 ipfw3_layer2_stop(void)
 {
-	return unregister_ipfw_module(MODULE_LAYER2_ID);
+	return ip_fw3_unregister_module(MODULE_LAYER2_ID);
 }
 
 static int

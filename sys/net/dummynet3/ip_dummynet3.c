@@ -1987,10 +1987,10 @@ ip_dn_init(void)
 		ip_dn_cpu = 0;
 	}
 
-	register_ipfw_module(MODULE_DUMMYNET_ID, MODULE_DUMMYNET_NAME);
-	register_ipfw_filter_funcs(MODULE_DUMMYNET_ID, O_DUMMYNET_PIPE,
+	ip_fw3_register_module(MODULE_DUMMYNET_ID, MODULE_DUMMYNET_NAME);
+	ip_fw3_register_filter_funcs(MODULE_DUMMYNET_ID, O_DUMMYNET_PIPE,
 			(filter_func)check_pipe);
-	register_ipfw_filter_funcs(MODULE_DUMMYNET_ID, O_DUMMYNET_QUEUE,
+	ip_fw3_register_filter_funcs(MODULE_DUMMYNET_ID, O_DUMMYNET_QUEUE,
 			(filter_func)check_pipe);
 
 	netmsg_init(&smsg, NULL, &curthread->td_msgport,

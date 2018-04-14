@@ -1044,62 +1044,62 @@ ipfw_basic_init(void)
 	ipfw_basic_append_state_prt = ipfw_basic_add_state;
 	ipfw_sync_install_state_prt = ipfw_sync_install_state;
 
-	register_ipfw_module(MODULE_BASIC_ID, MODULE_BASIC_NAME);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID, O_BASIC_COUNT,
+	ip_fw3_register_module(MODULE_BASIC_ID, MODULE_BASIC_NAME);
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID, O_BASIC_COUNT,
 			(filter_func)check_count);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID, O_BASIC_SKIPTO,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID, O_BASIC_SKIPTO,
 			(filter_func)check_skipto);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID, O_BASIC_FORWARD,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID, O_BASIC_FORWARD,
 			(filter_func)check_forward);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID, O_BASIC_KEEP_STATE,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID, O_BASIC_KEEP_STATE,
 			(filter_func)check_keep_state);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID, O_BASIC_CHECK_STATE,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID, O_BASIC_CHECK_STATE,
 			(filter_func)check_check_state);
 
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IN, (filter_func)check_in);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_OUT, (filter_func)check_out);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_VIA, (filter_func)check_via);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_XMIT, (filter_func)check_via);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_RECV, (filter_func)check_via);
 
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_PROTO, (filter_func)check_proto);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_PROB, (filter_func)check_prob);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_SRC, (filter_func)check_from);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_SRC_LOOKUP, (filter_func)check_from_lookup);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_SRC_ME, (filter_func)check_from_me);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_SRC_MASK, (filter_func)check_from_mask);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_DST, (filter_func)check_to);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_DST_LOOKUP, (filter_func)check_to_lookup);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_DST_ME, (filter_func)check_to_me);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_DST_MASK, (filter_func)check_to_mask);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_TAG, (filter_func)check_tag);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_UNTAG, (filter_func)check_untag);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_TAGGED, (filter_func)check_tagged);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_SRCPORT, (filter_func)check_src_port);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_DSTPORT, (filter_func)check_dst_port);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_SRC_N_PORT, (filter_func)check_src_n_port);
-	register_ipfw_filter_funcs(MODULE_BASIC_ID,
+	ip_fw3_register_filter_funcs(MODULE_BASIC_ID,
 			O_BASIC_IP_DST_N_PORT, (filter_func)check_dst_n_port);
 
 	int cpu;
@@ -1144,7 +1144,7 @@ ipfw_basic_stop(void)
 	struct ipfw_state_context *state_ctx;
 	struct ip_fw_state *state,*the_state;
 	struct ipfw_context *ctx;
-	if (unregister_ipfw_module(MODULE_BASIC_ID) ==0 ) {
+	if (ip_fw3_unregister_module(MODULE_BASIC_ID) ==0 ) {
 		ipfw_basic_flush_state_prt = NULL;
 		ipfw_basic_append_state_prt = NULL;
 

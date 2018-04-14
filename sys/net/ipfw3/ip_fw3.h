@@ -281,7 +281,7 @@ struct ip_fw_state {
 };
 
 
-/* ipfw_chk/ip_fw_chk_ptr return values */
+/* ip_fw3_chk/ip_fw_chk_ptr return values */
 #define IP_FW_PASS	0
 #define IP_FW_DENY	1
 #define IP_FW_DIVERT	2
@@ -290,7 +290,7 @@ struct ip_fw_state {
 #define IP_FW_NAT	5
 #define IP_FW_ROUTE	6
 
-/* ipfw_chk controller values */
+/* ip_fw3_chk controller values */
 #define IP_FW_CTL_NO		0
 #define IP_FW_CTL_DONE		1
 #define IP_FW_CTL_AGAIN		2
@@ -303,7 +303,7 @@ struct ip_fw_state {
 #define IP_FW_MATCH		1
 
 /*
- * arguments for calling ipfw_chk() and dummynet_io(). We put them
+ * arguments for calling ip_fw3_chk() and dummynet_io(). We put them
  * all into a structure because this way it is easier and more
  * efficient to pass variables around and extend the interface.
  */
@@ -316,7 +316,7 @@ struct ip_fw_args {
 	struct ipfw_flow_id f_id;	/* grabbed from IP header	*/
 
 	/*
-	 * Depend on the return value of ipfw_chk/ip_fw_chk_ptr
+	 * Depend on the return value of ip_fw3_chk/ip_fw_chk_ptr
 	 * 'cookie' field may save following information:
 	 *
 	 * IP_FW_TEE or IP_FW_DIVERT
@@ -333,7 +333,7 @@ struct ip_fw_args {
  * Function definitions.
  */
 int	ip_fw_sockopt(struct sockopt *);
-int	ipfw_ctl_x(struct sockopt *sopt);
+int	ip_fw3_ctl_x(struct sockopt *sopt);
 
 /* Firewall hooks */
 struct sockopt;
@@ -380,10 +380,10 @@ struct ipfw_state_context {
 
 typedef void (*filter_func)(int *cmd_ctl,int *cmd_val,struct ip_fw_args **args,
 struct ip_fw **f,ipfw_insn *cmd,uint16_t ip_len);
-void register_ipfw_filter_funcs(int module,int opcode,filter_func func);
+void ip_fw3_register_filter_funcs(int module,int opcode,filter_func func);
 void unregister_ipfw_filter_funcs(int module,filter_func func);
-void register_ipfw_module(int module_id,char *module_name);
-int unregister_ipfw_module(int module_id);
+void ip_fw3_register_module(int module_id,char *module_name);
+int ip_fw3_unregister_module(int module_id);
 
 #endif
 
@@ -468,7 +468,7 @@ struct ipfw_ioc_state {
 
 #define	ICMP_REJECT_RST		0x100	/* fake ICMP code (send a TCP RST) */
 
-struct ipfw_module{
+struct ipfw3_module{
 	int type;
 	int id;
 	char name[20];

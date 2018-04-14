@@ -204,16 +204,16 @@ check_bpf(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 static int
 ipfw3_layer4_init(void)
 {
-	register_ipfw_module(MODULE_LAYER4_ID, MODULE_LAYER4_NAME);
-	register_ipfw_filter_funcs(MODULE_LAYER4_ID, O_LAYER4_TCPFLAG,
+	ip_fw3_register_module(MODULE_LAYER4_ID, MODULE_LAYER4_NAME);
+	ip_fw3_register_filter_funcs(MODULE_LAYER4_ID, O_LAYER4_TCPFLAG,
 			(filter_func)check_tcpflag);
-	register_ipfw_filter_funcs(MODULE_LAYER4_ID, O_LAYER4_UID,
+	ip_fw3_register_filter_funcs(MODULE_LAYER4_ID, O_LAYER4_UID,
 			(filter_func)check_uid);
-	register_ipfw_filter_funcs(MODULE_LAYER4_ID, O_LAYER4_GID,
+	ip_fw3_register_filter_funcs(MODULE_LAYER4_ID, O_LAYER4_GID,
 			(filter_func)check_gid);
-	register_ipfw_filter_funcs(MODULE_LAYER4_ID, O_LAYER4_ESTABLISHED,
+	ip_fw3_register_filter_funcs(MODULE_LAYER4_ID, O_LAYER4_ESTABLISHED,
 			(filter_func)check_established);
-	register_ipfw_filter_funcs(MODULE_LAYER4_ID, O_LAYER4_BPF,
+	ip_fw3_register_filter_funcs(MODULE_LAYER4_ID, O_LAYER4_BPF,
 			(filter_func)check_bpf);
 	return 0;
 }
@@ -221,7 +221,7 @@ ipfw3_layer4_init(void)
 static int
 ipfw3_layer4_stop(void)
 {
-	return unregister_ipfw_module(MODULE_LAYER4_ID);
+	return ip_fw3_unregister_module(MODULE_LAYER4_ID);
 }
 
 static int

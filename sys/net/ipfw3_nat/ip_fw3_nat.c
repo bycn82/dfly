@@ -934,8 +934,8 @@ static
 int ip_fw3_nat_init(void)
 {
 	struct netmsg_base msg;
-	register_ipfw_module(MODULE_NAT_ID, MODULE_NAT_NAME);
-	register_ipfw_filter_funcs(MODULE_NAT_ID, O_NAT_NAT,
+	ip_fw3_register_module(MODULE_NAT_ID, MODULE_NAT_NAME);
+	ip_fw3_register_filter_funcs(MODULE_NAT_ID, O_NAT_NAT,
 			(filter_func)check_nat);
 	ipfw_ctl_nat_ptr = ip_fw3_ctl_nat_sockopt;
 	netmsg_init(&msg, NULL, &curthread->td_msgport,
@@ -972,7 +972,7 @@ ip_fw3_nat_fini(void)
 			0, nat_fnit_ctx_dispatch);
 	netisr_domsg(&msg, 0);
 
-	return unregister_ipfw_module(MODULE_NAT_ID);
+	return ip_fw3_unregister_module(MODULE_NAT_ID);
 }
 
 static int
