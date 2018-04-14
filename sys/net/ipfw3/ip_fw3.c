@@ -93,7 +93,7 @@ MALLOC_DEFINE(M_IPFW3, "IPFW3", "ip_fw3 default module");
 #ifdef IPFIREWALL_DEBUG
 #define DPRINTF(fmt, ...)			\
 do { 						\
-	if (fw3_debug > 0) 			\
+	if (sysctl_var_fw3_debug > 0) 		\
 		kprintf(fmt, __VA_ARGS__); 	\
 } while (0)
 #else
@@ -142,31 +142,31 @@ ipfw_basic_delete_state_t *ipfw_basic_flush_state_prt = NULL;
 ipfw_basic_append_state_t *ipfw_basic_append_state_prt = NULL;
 
 extern int ip_fw_loaded;
-int 			fw3_enable = 1;
-int 			fw3_one_pass = 1;
-int 			fw3_verbose = 0;
+int 			sysctl_var_fw3_enable = 1;
+int 			sysctl_var_fw3_one_pass = 1;
+int 			sysctl_var_fw3_verbose = 0;
 static uint32_t 	static_count;	/* # of static rules */
 static uint32_t 	static_ioc_len;	/* bytes of static rules */
-static int 		fw3_flushing;
-static int 		fw3_debug;
-static int 		autoinc_step = IPFW_AUTOINC_STEP_DEF;
+static int 		sysctl_var_fw3_flushing;
+static int 		sysctl_var_fw3_debug;
+static int 		sysctl_var_autoinc_step = IPFW_AUTOINC_STEP_DEF;
 
 static int	ip_fw3_sysctl_enable(SYSCTL_HANDLER_ARGS);
 static int	ip_fw3_sysctl_autoinc_step(SYSCTL_HANDLER_ARGS);
 
 SYSCTL_NODE(_net_inet_ip, OID_AUTO, fw3, CTLFLAG_RW, 0, "Firewall");
 SYSCTL_PROC(_net_inet_ip_fw3, OID_AUTO, enable, CTLTYPE_INT | CTLFLAG_RW,
-	&fw3_enable, 0, ip_fw3_sysctl_enable, "I", "Enable ipfw");
-SYSCTL_PROC(_net_inet_ip_fw3, OID_AUTO, autoinc_step, CTLTYPE_INT | CTLFLAG_RW,
-	&autoinc_step, 0, ip_fw3_sysctl_autoinc_step, "I",
-	"Rule number autincrement step");
+	&sysctl_var_fw3_enable, 0, ip_fw3_sysctl_enable, "I", "Enable ipfw");
+SYSCTL_PROC(_net_inet_ip_fw3, OID_AUTO, sysctl_var_autoinc_step,
+	CTLTYPE_INT | CTLFLAG_RW, &sysctl_var_autoinc_step, 0,
+	ip_fw3_sysctl_autoinc_step, "I", "Rule number autincrement step");
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO,one_pass,CTLFLAG_RW,
-	&fw3_one_pass, 0,
+	&sysctl_var_fw3_one_pass, 0,
 	"Only do a single pass through ipfw when using dummynet(4)");
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, debug, CTLFLAG_RW,
-	&fw3_debug, 0, "Enable printing of debug ip_fw statements");
+	&sysctl_var_fw3_debug, 0, "Enable printing of debug ip_fw statements");
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, verbose, CTLFLAG_RW,
-	&fw3_verbose, 0, "Log matches to ipfw rules");
+	&sysctl_var_fw3_verbose, 0, "Log matches to ipfw rules");
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, static_count, CTLFLAG_RD,
 	&static_count, 0, "Number of static rules");
 
@@ -451,15 +451,15 @@ after_ip_checks:
 		 * Packet has already been tagged. Look for the next rule
 		 * to restart processing.
 		 *
-		 * If fw3_one_pass != 0 then just accept it.
+		 * If sysctl_var_fw3_one_pass != 0 then just accept it.
 		 * XXX should not happen here, but optimized out in
 		 * the caller.
 		 */
-		if (fw3_one_pass)
+		if (sysctl_var_fw3_one_pass)
 			return IP_FW_PASS;
 
 		/* This rule is being/has been flushed */
-		if (fw3_flushing)
+		if (sysctl_var_fw3_flushing)
 			return IP_FW_DENY;
 
 		f = args->rule->next_rule;
@@ -483,7 +483,7 @@ after_ip_checks:
 		f = ctx->ipfw_rule_chain;
 		if (args->eh == NULL && skipto != 0) {
 			/* No skipto during rule flushing */
-			if (fw3_flushing) {
+			if (sysctl_var_fw3_flushing) {
 				return IP_FW_DENY;
 			}
 			if (skipto >= IPFW_DEFAULT_RULE) {
@@ -495,7 +495,7 @@ after_ip_checks:
 			if (f == NULL) {	/* drop packet */
 				return IP_FW_DENY;
 			}
-		} else if (fw3_flushing) {
+		} else if (sysctl_var_fw3_flushing) {
 			/* Rules are being flushed; skip to default rule */
 			f = ctx->ipfw_default_rule;
 		}
@@ -608,7 +608,7 @@ done:
 	return cmd_val;
 
 pullup_failed:
-	if (fw3_verbose)
+	if (sysctl_var_fw3_verbose)
 		kprintf("pullup failed\n");
 	return IP_FW_DENY;
 }
@@ -765,7 +765,7 @@ ip_fw3_add_rule(struct ipfw_ioc_rule *ioc_rule)
 	 * default rule, and add rule number incremental step.
 	 */
 	if (ioc_rule->rulenum == 0) {
-		int step = autoinc_step;
+		int step = sysctl_var_autoinc_step;
 
 		KKASSERT(step >= IPFW_AUTOINC_STEP_MIN &&
 				step <= IPFW_AUTOINC_STEP_MAX);
@@ -898,7 +898,7 @@ ip_fw3_ctl_flush_rule(int kill_default)
 		 * be flushed, so it could jump directly to
 		 * the default rule.
 		 */
-		fw3_flushing = 1;
+		sysctl_var_fw3_flushing = 1;
 		netmsg_service_sync();
 	}
 
@@ -930,7 +930,7 @@ ip_fw3_ctl_flush_rule(int kill_default)
 	}
 
 	/* Flush is done */
-	fw3_flushing = 0;
+	sysctl_var_fw3_flushing = 0;
 }
 
 static void
@@ -1323,7 +1323,7 @@ ip_fw3_ctl_zero_entry(int rulenum, int log_only)
 	netisr_domsg(nmsg, 0);
 	KKASSERT(zmsg.start_rule == NULL);
 
-	if (fw3_verbose)
+	if (sysctl_var_fw3_verbose)
 		log(LOG_SECURITY | LOG_NOTICE, msg, rulenum);
 	return (0);
 }
@@ -1426,7 +1426,8 @@ ip_fw3_ctl_add_rule(struct sockopt *sopt)
 }
 
 static void *
-ip_fw3_copy_state(struct ip_fw_state *state, struct ipfw_ioc_state *ioc_state, int cpuid)
+ip_fw3_copy_state(struct ip_fw_state *state,
+		struct ipfw_ioc_state *ioc_state, int cpuid)
 {
 	ioc_state->pcnt = state->pcnt;
 	ioc_state->bcnt = state->bcnt;
@@ -1920,11 +1921,11 @@ ip_fw3_sysctl_enable_dispatch(netmsg_t nmsg)
 	struct lwkt_msg *lmsg = &nmsg->lmsg;
 	int enable = lmsg->u.ms_result;
 
-	if (fw3_enable == enable)
+	if (sysctl_var_fw3_enable == enable)
 		goto reply;
 
-	fw3_enable = enable;
-	if (fw3_enable)
+	sysctl_var_fw3_enable = enable;
+	if (sysctl_var_fw3_enable)
 		ip_fw3_hook();
 	else
 		ip_fw3_dehook();
@@ -1940,7 +1941,7 @@ ip_fw3_sysctl_enable(SYSCTL_HANDLER_ARGS)
 	struct lwkt_msg *lmsg;
 	int enable, error;
 
-	enable = fw3_enable;
+	enable = sysctl_var_fw3_enable;
 	error = sysctl_handle_int(oidp, &enable, 0, req);
 	if (error || req->newptr == NULL)
 		return error;
@@ -2033,7 +2034,7 @@ ip_fw3_init_dispatch(netmsg_t nmsg)
 			filters_default_to_accept ? "accept" : "deny");
 
 	ip_fw3_loaded = 1;
-	if (fw3_enable)
+	if (sysctl_var_fw3_enable)
 		ip_fw3_hook();
 reply:
 	lwkt_replymsg(&nmsg->lmsg, error);

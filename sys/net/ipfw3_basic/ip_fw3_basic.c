@@ -73,7 +73,7 @@
 
 extern struct ipfw_context		*ipfw_ctx[MAXCPU];
 extern struct ipfw_sync_context 	sync_ctx;
-extern int 				fw3_verbose;
+extern int 				sysctl_var_fw3_verbose;
 extern ipfw_basic_delete_state_t 	*ipfw_basic_flush_state_prt;
 extern ipfw_basic_append_state_t 	*ipfw_basic_append_state_prt;
 extern ipfw_sync_send_state_t 		*ipfw_sync_send_state_prt;

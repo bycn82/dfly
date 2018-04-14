@@ -349,10 +349,6 @@ extern ip_fw_chk_t	*ip_fw_chk_ptr;
 extern ip_fw_ctl_t	*ip_fw_ctl_x_ptr;
 extern ip_fw_dn_io_t	*ip_fw_dn_io_ptr;
 
-extern int fw3_one_pass;
-extern int fw3_enable;
-
-
 #define IPFW_CFGCPUID	0
 #define IPFW_CFGPORT	netisr_cpuport(IPFW_CFGCPUID)
 #define IPFW_ASSERT_CFGPORT(msgport)				\
@@ -440,8 +436,8 @@ struct ipfw_ioc_state {
 	uint64_t	pcnt;		/* packet match counter		*/
 	uint64_t	bcnt;		/* byte match counter		*/
 	uint16_t 	lifetime;
-	uint32_t	timestamp;	/* alive time				*/
-	uint32_t	expiry;		/* expire time				*/
+	uint32_t	timestamp;	/* alive time			*/
+	uint32_t	expiry;		/* expire time			*/
 
 	uint16_t	rulenum;
 	uint16_t	cpuid;
