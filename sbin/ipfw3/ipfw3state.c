@@ -138,7 +138,7 @@ state_add(int ac, char *av[])
 }
 
 void
-delete_state(int ac, char *av[])
+state_delete(int ac, char *av[])
 {
 	int rulenum;
 	NEXT_ARG;
@@ -151,7 +151,7 @@ delete_state(int ac, char *av[])
 }
 
 void
-flush_state(int ac, char *av[])
+state_flush(int ac, char *av[])
 {
 	if (!do_force) {
 		int c;
@@ -175,7 +175,7 @@ flush_state(int ac, char *av[])
 
 
 void
-show_states(struct ipfw_ioc_state *d, int pcwidth, int bcwidth)
+state_show(struct ipfw_ioc_state *d, int pcwidth, int bcwidth)
 {
 	struct protoent *pe;
 	struct in_addr a;
@@ -226,7 +226,7 @@ show_states(struct ipfw_ioc_state *d, int pcwidth, int bcwidth)
 }
 
 void
-list(int ac, char *av[])
+state_list(int ac, char *av[])
 {
 	struct ipfw_ioc_state *dynrules, *d;
 	struct ipfw_ioc_rule *r;
@@ -301,7 +301,7 @@ list(int ac, char *av[])
 				printf("## States (%d):\n", ndyn);
 			}
 			for (n = 0, d = dynrules; n < ndyn; n++, d++)
-				show_states(d, pcwidth, bcwidth);
+				state_show(d, pcwidth, bcwidth);
 		}
 		goto done;
 	}
@@ -344,7 +344,7 @@ list(int ac, char *av[])
 				if (d->rulenum > rnum)
 					break;
 				if (d->rulenum == rnum)
-					show_states(d, pcwidth, bcwidth);
+					state_show(d, pcwidth, bcwidth);
 			}
 		}
 	}
@@ -369,11 +369,11 @@ state_main(int ac, char **av)
 		state_flush(ac, av);
 	} else if (!strncmp(*av, "list", strlen(*av))) {
 		do_dynamic = 2;
-		list(ac, av);
+		state_list(ac, av);
 	} else if (!strncmp(*av, "show", strlen(*av))) {
 		do_acct = 1;
 		do_dynamic =2;
-		list(ac, av);
+		state_list(ac, av);
 	} else {
 		errx(EX_USAGE, "bad ipfw state command `%s'", *av);
 	}
