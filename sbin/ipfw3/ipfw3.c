@@ -68,6 +68,7 @@
 #include <net/ipfw3_nat/ip_fw3_nat.h>
 
 #include "ipfw3.h"
+#include "ipfw3basic.h"
 #include "ipfw3sync.h"
 #include "ipfw3nat.h"
 

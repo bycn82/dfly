@@ -185,30 +185,6 @@ lookup_next_rule(struct ip_fw *me)
 	return rule;
 }
 
-/*
- * return value
- * 0 : not match  1: same direction 2: reverse direction
- */
-int
-match_state(ipfw_insn *cmd, struct ipfw_flow_id *fid, struct ipfw3_state *state)
-{
-	/* TODO */
-	return 0;
-}
-
-/*
- * return 1 when more states than limit
- * arg3: limit type (1=src ip, 2=src port, 3=dst ip, 4=dst port)
- * arg1: limit
- */
-int
-count_match_state(ipfw_insn *cmd, struct ipfw_flow_id *fid,
-	struct ipfw3_state *state, int *count)
-{
-	/* TODO */
-	return 0;
-}
-
 void
 ipfw_sync_install_state(struct cmd_send_state *cmd)
 {
