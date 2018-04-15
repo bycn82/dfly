@@ -418,7 +418,7 @@ pick_alias_port(struct nat_state *s, struct state_tree *tree)
 }
 
 int
-nat_state_cmp(struct nat_state *s1, struct nat_state *s2)
+ip_fw3_nat_state_cmp(struct nat_state *s1, struct nat_state *s2)
 {
 	if (s1->src_addr > s2->src_addr)
 		return 1;

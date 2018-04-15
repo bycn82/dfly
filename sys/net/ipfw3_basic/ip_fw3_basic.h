@@ -109,6 +109,7 @@ struct ipfw3_state_context {
 	struct fw3_state_tree	rb_icmp_in;
 	struct fw3_state_tree	rb_icmp_out;
 };
+#define LEN_STATE_CTX sizeof(struct ipfw3_state_context)
 
 typedef void ipfw_sync_send_state_t(struct ipfw3_state *, int cpu, int hash);
 
