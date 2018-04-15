@@ -704,7 +704,7 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 			goto done;
 		}
 	}
-	if (the_count <= the_max) {
+	if (*the_count <= the_max) {
 		s = kmalloc(LEN_FW3_STATE, M_IPFW3_BASIC,
 				M_INTWAIT | M_NULLOK | M_ZERO);
 		s->src_addr = k->src_addr;
