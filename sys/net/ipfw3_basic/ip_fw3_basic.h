@@ -108,6 +108,13 @@ struct ipfw3_state_context {
 	struct fw3_state_tree	rb_udp_out;
 	struct fw3_state_tree	rb_icmp_in;
 	struct fw3_state_tree	rb_icmp_out;
+
+	int		count_tcp_in;
+	int		count_tcp_out;
+	int		count_udp_in;
+	int		count_udp_out;
+	int		count_icmp_in;
+	int		count_icmp_out;
 };
 #define LEN_STATE_CTX sizeof(struct ipfw3_state_context)
 

@@ -90,7 +90,13 @@ extern ipfw_sync_install_state_t 	*ipfw_sync_install_state_prt;
 
 static struct callout 		ip_fw3_basic_cleanup_callout;
 
-static int 			sysctl_var_state_max = 4096;
+static int 			sysctl_var_state_max_tcp_in = 4096;
+static int 			sysctl_var_state_max_udp_in = 4096;
+static int 			sysctl_var_state_max_icmp_in = 10;
+static int 			sysctl_var_state_max_tcp_out = 4096;
+static int 			sysctl_var_state_max_udp_out = 4096;
+static int 			sysctl_var_state_max_icmp_out = 10;
+
 static int 			sysctl_var_cleanup_interval = 1;
 static int 			sysctl_var_icmp_timeout = 10;
 static int 			sysctl_var_tcp_timeout = 60;
@@ -99,8 +105,20 @@ static int 			sysctl_var_udp_timeout = 30;
 void	ipfw_sync_install_state(struct cmd_send_state *cmd);
 
 SYSCTL_NODE(_net_inet_ip, OID_AUTO, fw3_basic, CTLFLAG_RW, 0, "Firewall Basic");
-SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_count_max, CTLFLAG_RW,
-		&sysctl_var_state_max, 0, "maximum of state");
+
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_tcp_in, CTLFLAG_RW,
+		&sysctl_var_state_max_tcp_in, 0, "maximum of tcp state in");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_tcp_out, CTLFLAG_RW,
+		&sysctl_var_state_max_tcp_out, 0, "maximum of tcp state out");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_udp_in, CTLFLAG_RW,
+		&sysctl_var_state_max_udp_in, 0, "maximum of udp state in");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_udp_out, CTLFLAG_RW,
+		&sysctl_var_state_max_udp_out, 0, "maximum of udp state out");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_icmp_in, CTLFLAG_RW,
+		&sysctl_var_state_max_icmp_in, 0, "maximum of icmp state in");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_icmp_out, CTLFLAG_RW,
+		&sysctl_var_state_max_icmp_out, 0, "maximum of icmp state out");
+
 SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, cleanup_interval, CTLFLAG_RW,
 		&sysctl_var_cleanup_interval, 0,
 		"default state expiry check interval");
