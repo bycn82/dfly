@@ -628,11 +628,11 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len)
 {
 	/* state_tree 1 same direction, state_tree2 opposite direction */
-	struct fw3_state_tree *state_tree = NULL;
+	struct fw3_state_tree *the_tree = NULL;
 	struct ip *ip = mtod((*args)->m, struct ip *);
 	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
 	struct ipfw3_state *s, *k, key;
-	int states_matched = 0;
+	int states_matched = 0, *the_count, the_max;
 
 	k = &key;
 	memset(k, 0, LEN_FW3_STATE);
@@ -640,26 +640,38 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	if ((*args)->oif == NULL) {
 		switch (ip->ip_p) {
 		case IPPROTO_TCP:
-			state_tree = &state_ctx->rb_tcp_in;
+			the_tree = &state_ctx->rb_tcp_in;
+			the_count = &state_ctx->count_tcp_in;
+			the_max = sysctl_var_state_max_tcp_in;
 		break;
 		case IPPROTO_UDP:
-			state_tree = &state_ctx->rb_udp_in;
+			the_tree = &state_ctx->rb_udp_in;
+			the_count = &state_ctx->count_udp_in;
+			the_max = sysctl_var_state_max_udp_in;
 		break;
 		case IPPROTO_ICMP:
-			state_tree = &state_ctx->rb_icmp_in;
+			the_tree = &state_ctx->rb_icmp_in;
+			the_count = &state_ctx->count_icmp_in;
+			the_max = sysctl_var_state_max_icmp_in;
 		default:
 			goto done;
 		}
 	} else {
 		switch (ip->ip_p) {
 		case IPPROTO_TCP:
-			state_tree = &state_ctx->rb_tcp_out;
+			the_tree = &state_ctx->rb_tcp_out;
+			the_count = &state_ctx->count_tcp_out;
+			the_max = sysctl_var_state_max_tcp_out;
 		break;
 		case IPPROTO_UDP:
-			state_tree = &state_ctx->rb_udp_out;
+			the_tree = &state_ctx->rb_udp_out;
+			the_count = &state_ctx->count_udp_out;
+			the_max = sysctl_var_state_max_udp_out;
 		break;
 		case IPPROTO_ICMP:
-			state_tree = &state_ctx->rb_icmp_out;
+			the_tree = &state_ctx->rb_icmp_out;
+			the_count = &state_ctx->count_icmp_out;
+			the_max = sysctl_var_state_max_icmp_out;
 		default:
 			goto done;
 		}
@@ -672,12 +684,12 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 
 	/* cmd->arg3 is `limit type` */
 	if (cmd->arg3 == 0) {
-		s = RB_FIND(fw3_state_tree, state_tree, k);
+		s = RB_FIND(fw3_state_tree, the_tree, k);
 		if (s != NULL) {
 			goto done;
 		}
 	} else {
-		RB_FOREACH(s, fw3_state_tree, state_tree) {
+		RB_FOREACH(s, fw3_state_tree, the_tree) {
 			if (cmd->arg3 == 1 && s->src_addr == k->src_addr) {
 				states_matched++;
 			} else if (cmd->arg3 == 2 && s->src_port == k->src_port) {
@@ -692,13 +704,15 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 			goto done;
 		}
 	}
-	s = kmalloc(LEN_FW3_STATE, M_IPFW3_BASIC,
-			M_INTWAIT | M_NULLOK | M_ZERO);
-	s->src_addr = k->src_addr;
-	s->dst_addr = k->dst_addr;
-	s->src_port = k->src_port;
-	s->dst_port = k->dst_port;
-	RB_INSERT(fw3_state_tree, state_tree, s);
+	if (the_count <= the_max) {
+		s = kmalloc(LEN_FW3_STATE, M_IPFW3_BASIC,
+				M_INTWAIT | M_NULLOK | M_ZERO);
+		s->src_addr = k->src_addr;
+		s->dst_addr = k->dst_addr;
+		s->src_port = k->src_port;
+		s->dst_port = k->dst_port;
+		RB_INSERT(fw3_state_tree, the_tree, s);
+	}
 done:
 	*cmd_ctl = IP_FW_CTL_NO;
 	*cmd_val = IP_FW_MATCH;
