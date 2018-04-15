@@ -258,7 +258,7 @@ table_list(int ac, char *av[])
 }
 
 void
-print_table(struct ipfw_ioc_table * tbl)
+table_print(struct ipfw_ioc_table * tbl)
 {
 	int i;
         if (tbl->type == 0)
@@ -323,7 +323,7 @@ table_show(int ac, char *av[])
 				err(EX_OSERR, "do_get_x(IP_FW_TABLE_LIST)");
 			struct ipfw_ioc_table *tbl;
 			tbl = (struct ipfw_ioc_table *)data;
-			print_table(tbl);
+			table_print(tbl);
 		}
 	} else {
 		errx(EX_USAGE, "ipfw3 table `%s' show invalid", *av);

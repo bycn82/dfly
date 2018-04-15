@@ -41,7 +41,7 @@ void	table_append(int ac, char **av);
 void	table_remove(int ac, char **av);
 void	table_flush(int ac, char **av);
 void	table_list(int ac, char **av);
-void	print_table(struct ipfw_ioc_table * tbl);
+void	table_print(struct ipfw_ioc_table * tbl);
 void	table_show(int ac, char **av);
 void	table_create(int ac, char **av);
 void	table_delete(int ac, char **av);
