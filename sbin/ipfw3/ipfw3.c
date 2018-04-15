@@ -69,6 +69,7 @@
 
 #include "ipfw3.h"
 #include "ipfw3basic.h"
+#include "ipfw3state.h"
 #include "ipfw3sync.h"
 #include "ipfw3nat.h"
 
@@ -874,92 +875,6 @@ sets_handler(int ac, char *av[])
 		errx(EX_USAGE, "invalid set command %s\n", *av);
 }
 
-static void
-add_state(int ac, char *av[])
-{
-	struct ipfw_ioc_state ioc_state;
-	ioc_state.expiry = 0;
-	ioc_state.lifetime = 0;
-	NEXT_ARG;
-	if (strcmp(*av, "rulenum") == 0) {
-		NEXT_ARG;
-		ioc_state.rulenum = atoi(*av);
-	} else {
-		errx(EX_USAGE, "ipfw state add rule");
-	}
-	NEXT_ARG;
-	struct protoent *pe;
-	pe = getprotobyname(*av);
-	ioc_state.flow_id.proto = pe->p_proto;
-
-	NEXT_ARG;
-	ioc_state.flow_id.src_ip = inet_addr(*av);
-
-	NEXT_ARG;
-	ioc_state.flow_id.src_port = atoi(*av);
-
-	NEXT_ARG;
-	ioc_state.flow_id.dst_ip = inet_addr(*av);
-
-	NEXT_ARG;
-	ioc_state.flow_id.dst_port = atoi(*av);
-
-	NEXT_ARG;
-	if (strcmp(*av, "live") == 0) {
-		NEXT_ARG;
-		ioc_state.lifetime = atoi(*av);
-		NEXT_ARG;
-	}
-
-	if (strcmp(*av, "expiry") == 0) {
-		NEXT_ARG;
-		ioc_state.expiry = strtoul(*av, NULL, 10);
-		printf("ioc_state.expiry=%d\n", ioc_state.expiry);
-	}
-
-	if (do_set_x(IP_FW_STATE_ADD, &ioc_state, sizeof(struct ipfw_ioc_state)) < 0 ) {
-		err(EX_UNAVAILABLE, "do_set_x(IP_FW_STATE_ADD)");
-	}
-	if (!do_quiet) {
-		printf("Flushed all states.\n");
-	}
-}
-
-static void
-delete_state(int ac, char *av[])
-{
-	int rulenum;
-	NEXT_ARG;
-	if (ac == 1 && isdigit(**av))
-		rulenum = atoi(*av);
-	if (do_set_x(IP_FW_STATE_DEL, &rulenum, sizeof(int)) < 0 )
-		err(EX_UNAVAILABLE, "do_set_x(IP_FW_STATE_DEL)");
-	if (!do_quiet)
-		printf("Flushed all states.\n");
-}
-
-static void
-flush_state(int ac, char *av[])
-{
-	if (!do_force) {
-		int c;
-
-		printf("Are you sure? [yn] ");
-		fflush(stdout);
-		do {
-			c = toupper(getc(stdin));
-			while (c != '\n' && getc(stdin) != '\n')
-				if (feof(stdin))
-					return; /* and do not flush */
-		} while (c != 'Y' && c != 'N');
-		if (c == 'N')	/* user said no */
-			return;
-	}
-	if (do_set_x(IP_FW_STATE_FLUSH, NULL, 0) < 0 )
-		err(EX_UNAVAILABLE, "do_set_x(IP_FW_STATE_FLUSH)");
-	if (!do_quiet)
-		printf("Flushed all states.\n");
-}
 
 static int
 lookup_host (char *host, struct in_addr *ipaddr)
@@ -2523,22 +2438,7 @@ ipfw_main(int ac, char **av)
 		}
 	} else if (!strncmp(*av, "state", strlen(*av))) {
 		NEXT_ARG;
-		if (!strncmp(*av, "add", strlen(*av))) {
-			add_state(ac, av);
-		} else if (!strncmp(*av, "delete", strlen(*av))) {
-			delete_state(ac, av);
-		} else if (!strncmp(*av, "flush", strlen(*av))) {
-			flush_state(ac, av);
-		} else if (!strncmp(*av, "list", strlen(*av))) {
-			do_dynamic = 2;
-			list(ac, av);
-		} else if (!strncmp(*av, "show", strlen(*av))) {
-			do_acct = 1;
-			do_dynamic =2;
-			list(ac, av);
-		} else {
-			errx(EX_USAGE, "bad ipfw state command `%s'", *av);
-		}
+		state_main(ac, av);
 	} else if (!strncmp(*av, "table", strlen(*av))) {
 		if (ac > 2 && isdigit(*(av[1]))) {
 			char *p = av[1];
