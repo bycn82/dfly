@@ -5,6 +5,7 @@ MAN =	ipfw3.8
 SRCS =	ipfw3.c
 SRCS += ipfw3basic.c ipfw3basic.h
 SRCS += ipfw3set.c ipfw3set.h
+SRCS += ipfw3log.c ipfw3log.h
 SRCS += ipfw3sync.c ipfw3sync.h
 SRCS += ipfw3state.c ipfw3state.h
 SRCS += ipfw3table.c ipfw3table.h

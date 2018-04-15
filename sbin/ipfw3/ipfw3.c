@@ -69,6 +69,7 @@
 
 #include "ipfw3.h"
 #include "ipfw3basic.h"
+#include "ipfw3log.h"
 #include "ipfw3set.h"
 #include "ipfw3table.h"
 #include "ipfw3dummynet.h"
@@ -1092,46 +1093,6 @@ zero(int ac, char *av[])
 }
 
 static void
-resetlog(int ac, char *av[])
-{
-	int rulenum;
-	int failed = EX_OK;
-
-	NEXT_ARG;
-
-	if (!ac) {
-		/* clear all entries */
-		if (setsockopt(ipfw_socket, IPPROTO_IP,
-					IP_FW_RESETLOG, NULL, 0) < 0)
-			err(EX_UNAVAILABLE, "setsockopt(IP_FW_RESETLOG)");
-		if (!do_quiet)
-			printf("Logging counts reset.\n");
-
-		return;
-	}
-
-	while (ac) {
-		/* Rule number */
-		if (isdigit(**av)) {
-			rulenum = atoi(*av);
-			NEXT_ARG;
-			if (setsockopt(ipfw_socket, IPPROTO_IP,
-				IP_FW_RESETLOG, &rulenum, sizeof rulenum)) {
-				warn("rule %u: setsockopt(IP_FW_RESETLOG)",
-						rulenum);
-				failed = EX_UNAVAILABLE;
-			} else if (!do_quiet)
-				printf("Entry %d logging count reset\n",
-						rulenum);
-		} else {
-			errx(EX_DATAERR, "invalid rule number ``%s''", *av);
-		}
-	}
-	if (failed != EX_OK)
-		exit(failed);
-}
-
-static void
 flush(void)
 {
 	int cmd = IP_FW_FLUSH;
@@ -1327,19 +1288,9 @@ ipfw_main(int ac, char **av)
 		} else {
 			errx(EX_USAGE, "bad ipfw module command `%s'", *av);
 		}
-	} else if (!strncmp(*av, "resetlog", strlen(*av))) {
-		resetlog(ac, av);
 	} else if (!strncmp(*av, "log", strlen(*av))) {
 		NEXT_ARG;
-		if (!strncmp(*av, "reset", strlen(*av))) {
-			resetlog(ac, av);
-		} else if (!strncmp(*av, "off", strlen(*av))) {
-
-		} else if (!strncmp(*av, "on", strlen(*av))) {
-
-		} else {
-			errx(EX_USAGE, "bad command `%s'", *av);
-		}
+		log_main(ac, av);
 	} else if (!strncmp(*av, "nat", strlen(*av))) {
 		NEXT_ARG;
 		nat_main(ac, av);
