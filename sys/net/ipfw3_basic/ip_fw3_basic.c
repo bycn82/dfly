@@ -369,12 +369,12 @@ check_check_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	s = RB_FIND(fw3_state_tree, state_tree2, k);
 	if (s != NULL) {
 		*cmd_val = IP_FW_PASS;
-		*cmd_ctl = IP_FW_CTL_NEXT;
+		*cmd_ctl = IP_FW_CTL_CHK_STATE;
 		return;
 	}
 oops:
 	*cmd_val = IP_FW_NOT_MATCH;
-	*cmd_ctl = IP_FW_CTL_NO;
+	*cmd_ctl = IP_FW_CTL_NEXT;
 }
 
 void
@@ -614,6 +614,7 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	struct ip *ip = mtod((*args)->m, struct ip *);
 	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
 	struct ipfw3_state *s, *k, key;
+	int states_matched = 0;
 
 	k = &key;
 	memset(k, 0, LEN_FW3_STATE);
@@ -629,7 +630,7 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		case IPPROTO_ICMP:
 			state_tree = &state_ctx->rb_icmp_in;
 		default:
-			*cmd_val = IP_FW_NOT_MATCH;
+			goto done;
 		}
 	} else {
 		switch (ip->ip_p) {
@@ -642,7 +643,7 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		case IPPROTO_ICMP:
 			state_tree = &state_ctx->rb_icmp_out;
 		default:
-			*cmd_val = IP_FW_NOT_MATCH;
+			goto done;
 		}
 	}
 	*cmd_ctl = IP_FW_CTL_NO;
@@ -650,16 +651,39 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	k->dst_addr = (*args)->f_id.dst_ip;
 	k->src_port = (*args)->f_id.src_port;
 	k->dst_port = (*args)->f_id.dst_port;
-	s = RB_FIND(fw3_state_tree, state_tree, k);
-	if (s == NULL) {
-		s = kmalloc(LEN_FW3_STATE, M_IPFW3_BASIC,
-				M_INTWAIT | M_NULLOK | M_ZERO);
-		s->src_addr = k->src_addr;
-		s->dst_addr = k->dst_addr;
-		s->src_port = k->src_port;
-		s->dst_port = k->dst_port;
-		RB_INSERT(fw3_state_tree, state_tree, s);
+
+	/* cmd->arg3 is `limit type` */
+	if (cmd->arg3 == 0) {
+		s = RB_FIND(fw3_state_tree, state_tree, k);
+		if (s != NULL) {
+			goto done;
+		}
+	} else {
+		RB_FOREACH(s, fw3_state_tree, state_tree) {
+			if (cmd->arg3 == 1 && s->src_addr == k->src_addr) {
+				states_matched++;
+			} else if (cmd->arg3 == 2 && s->src_port == k->src_port) {
+				states_matched++;
+			} else if (cmd->arg3 == 3 && s->dst_addr == k->dst_addr) {
+				states_matched++;
+			} else if (cmd->arg3 == 4 && s->dst_port == k->dst_port) {
+				states_matched++;
+			}
+		}
+		if (states_matched >= cmd->arg1) {
+			goto done;
+		}
 	}
+	s = kmalloc(LEN_FW3_STATE, M_IPFW3_BASIC,
+			M_INTWAIT | M_NULLOK | M_ZERO);
+	s->src_addr = k->src_addr;
+	s->dst_addr = k->dst_addr;
+	s->src_port = k->src_port;
+	s->dst_port = k->dst_port;
+	RB_INSERT(fw3_state_tree, state_tree, s);
+done:
+	*cmd_ctl = IP_FW_CTL_NO;
+	*cmd_val = IP_FW_MATCH;
 }
 
 void
