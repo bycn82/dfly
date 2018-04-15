@@ -93,6 +93,7 @@ struct ipfw3_state {
 	uint32_t		dst_addr;
 	uint16_t		src_port;
 	uint16_t		dst_port;
+	struct ip_fw		*stub;
 	time_t			timestamp;
 };
 #define LEN_FW3_STATE sizeof(struct ipfw3_state)

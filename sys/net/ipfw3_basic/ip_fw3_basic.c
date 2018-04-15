@@ -349,6 +349,7 @@ check_check_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		case IPPROTO_ICMP:
 			state_tree1 = &state_ctx->rb_icmp_in;
 			state_tree2 = &state_ctx->rb_icmp_out;
+		break;
 		default:
 			goto oops;
 		}
@@ -365,6 +366,7 @@ check_check_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		case IPPROTO_ICMP:
 			state_tree1 = &state_ctx->rb_icmp_out;
 			state_tree2 = &state_ctx->rb_icmp_in;
+		break;
 		default:
 			goto oops;
 		}
@@ -376,8 +378,12 @@ check_check_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	k->dst_port = (*args)->f_id.dst_port;
 	s = RB_FIND(fw3_state_tree, state_tree1, k);
 	if (s != NULL) {
+		(*f)->pcnt++;
+		(*f)->bcnt += ip_len;
+		(*f)->timestamp = time_second;
+		*f = s->stub;
 		*cmd_val = IP_FW_PASS;
-		*cmd_ctl = IP_FW_CTL_NEXT;
+		*cmd_ctl = IP_FW_CTL_CHK_STATE;
 		return;
 	}
 	k->dst_addr = (*args)->f_id.src_ip;
@@ -386,6 +392,10 @@ check_check_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	k->src_port = (*args)->f_id.dst_port;
 	s = RB_FIND(fw3_state_tree, state_tree2, k);
 	if (s != NULL) {
+		(*f)->pcnt++;
+		(*f)->bcnt += ip_len;
+		(*f)->timestamp = time_second;
+		*f = s->stub;
 		*cmd_val = IP_FW_PASS;
 		*cmd_ctl = IP_FW_CTL_CHK_STATE;
 		return;
@@ -636,7 +646,6 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 
 	k = &key;
 	memset(k, 0, LEN_FW3_STATE);
-
 	if ((*args)->oif == NULL) {
 		switch (ip->ip_p) {
 		case IPPROTO_TCP:
@@ -653,6 +662,7 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 			the_tree = &state_ctx->rb_icmp_in;
 			the_count = &state_ctx->count_icmp_in;
 			the_max = sysctl_var_state_max_icmp_in;
+		break;
 		default:
 			goto done;
 		}
@@ -672,6 +682,7 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 			the_tree = &state_ctx->rb_icmp_out;
 			the_count = &state_ctx->count_icmp_out;
 			the_max = sysctl_var_state_max_icmp_out;
+		break;
 		default:
 			goto done;
 		}
@@ -681,7 +692,6 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	k->dst_addr = (*args)->f_id.dst_ip;
 	k->src_port = (*args)->f_id.src_port;
 	k->dst_port = (*args)->f_id.dst_port;
-
 	/* cmd->arg3 is `limit type` */
 	if (cmd->arg3 == 0) {
 		s = RB_FIND(fw3_state_tree, the_tree, k);
@@ -705,12 +715,14 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		}
 	}
 	if (*the_count <= the_max) {
+		(*the_count)++;
 		s = kmalloc(LEN_FW3_STATE, M_IPFW3_BASIC,
 				M_INTWAIT | M_NULLOK | M_ZERO);
 		s->src_addr = k->src_addr;
 		s->dst_addr = k->dst_addr;
 		s->src_port = k->src_port;
 		s->dst_port = k->dst_port;
+		s->stub = *f;
 		RB_INSERT(fw3_state_tree, the_tree, s);
 	}
 done:
