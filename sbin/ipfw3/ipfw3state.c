@@ -87,7 +87,7 @@ extern int do_acct;
 
 
 void
-add_state(int ac, char *av[])
+state_add(int ac, char *av[])
 {
 	struct ipfw_ioc_state ioc_state;
 	ioc_state.expiry = 0;
@@ -362,11 +362,11 @@ void
 state_main(int ac, char **av)
 {
 	if (!strncmp(*av, "add", strlen(*av))) {
-		add_state(ac, av);
+		state_add(ac, av);
 	} else if (!strncmp(*av, "delete", strlen(*av))) {
-		delete_state(ac, av);
+		state_delete(ac, av);
 	} else if (!strncmp(*av, "flush", strlen(*av))) {
-		flush_state(ac, av);
+		state_flush(ac, av);
 	} else if (!strncmp(*av, "list", strlen(*av))) {
 		do_dynamic = 2;
 		list(ac, av);

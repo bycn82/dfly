@@ -34,8 +34,8 @@
 
 #ifndef _IPFW3STATE_H_
 #define _IPFW3STATE_H_
-void	add_state(int ac, char **av);
-void	delete_state(int ac, char **av);
-void	flush_state(int ac, char **av);
+void	state_add(int ac, char **av);
+void	state_delete(int ac, char **av);
+void	state_flush(int ac, char **av);
 void 	state_main(int ac, char **av);
 #endif
