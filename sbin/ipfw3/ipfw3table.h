@@ -35,5 +35,17 @@
 #ifndef _IPFW3TABLE_H_
 #define _IPFW3TABLE_H_
 
+int	lookup_host (char *host, struct in_addr *ipaddr);
 
+void	table_append(int ac, char **av);
+void	table_remove(int ac, char **av);
+void	table_flush(int ac, char **av);
+void	table_list(int ac, char **av);
+void	print_table(struct ipfw_ioc_table * tbl);
+void	table_show(int ac, char **av);
+void	table_create(int ac, char **av);
+void	table_delete(int ac, char **av);
+void	table_test(int ac, char **av);
+
+void	table_main(int ac, char **av);
 #endif
