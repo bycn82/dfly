@@ -295,3 +295,54 @@ sync_centre_test(int ac, char *av[])
 	}
 	printf("centre test %d sent\n", n);
 }
+
+
+void
+sync_main(int ac, char **av)
+{
+	if (!strncmp(*av, "edge", strlen(*av))) {
+		sync_config_edge(ac, av);
+	} else if (!strncmp(*av, "centre", strlen(*av))) {
+		sync_config_centre(ac, av);
+	} else if (!strncmp(*av, "show", strlen(*av))) {
+		NEXT_ARG;
+		if (!strncmp(*av, "config", strlen(*av))) {
+			sync_show_config(ac, av);
+		} else if (!strncmp(*av, "status", strlen(*av))) {
+			sync_show_status(ac, av);
+		} else {
+			errx(EX_USAGE, "bad show command `%s'", *av);
+		}
+	} else if (!strncmp(*av, "start", strlen(*av))) {
+		NEXT_ARG;
+		if (!strncmp(*av, "edge", strlen(*av))) {
+			sync_edge_start(ac, av);
+		} else if (!strncmp(*av, "centre", strlen(*av))) {
+			sync_centre_start(ac, av);
+		}
+	} else if (!strncmp(*av, "stop", strlen(*av))) {
+		NEXT_ARG;
+		if (!strncmp(*av, "edge", strlen(*av))) {
+			sync_edge_stop(ac, av);
+		} else if (!strncmp(*av, "centre", strlen(*av))) {
+			sync_centre_stop(ac, av);
+		}
+	} else if (!strncmp(*av, "clear", strlen(*av))) {
+		NEXT_ARG;
+		if (!strncmp(*av, "edge", strlen(*av))) {
+			sync_edge_clear(ac, av);
+		} else if (!strncmp(*av, "centre", strlen(*av))) {
+			sync_centre_clear(ac, av);
+		}
+	} else if (!strncmp(*av, "test", strlen(*av))) {
+		NEXT_ARG;
+		if (!strncmp(*av, "edge", strlen(*av))) {
+			sync_edge_test(ac, av);
+		} else if (!strncmp(*av, "centre", strlen(*av))) {
+			sync_centre_test(ac, av);
+		}
+	} else {
+		errx(EX_USAGE, "bad ipfw sync command `%s'", *av);
+	}
+}
+

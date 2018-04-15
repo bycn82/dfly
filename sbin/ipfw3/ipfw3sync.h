@@ -35,17 +35,18 @@
 #ifndef _IPFW3SYNC_H_
 #define _IPFW3SYNC_H_
 
-void sync_config_edge(int ac, char *av[]);
-void sync_config_centre(int ac, char *av[]);
-void sync_show_config(int ac, char *av[]);
-void sync_show_status(int ac, char *av[]);
-void sync_edge_start(int ac, char *av[]);
-void sync_centre_start(int ac, char *av[]);
-void sync_edge_stop(int ac, char *av[]);
-void sync_centre_stop(int ac, char *av[]);
-void sync_edge_clear(int ac, char *av[]);
-void sync_centre_clear(int ac, char *av[]);
-void sync_edge_test(int ac, char *av[]);
-void sync_centre_test(int ac, char *av[]);
+void	sync_config_edge(int ac, char **av);
+void	sync_config_centre(int ac, char **av);
+void	sync_show_config(int ac, char **av);
+void	sync_show_status(int ac, char **av);
+void	sync_edge_start(int ac, char **av);
+void	sync_centre_start(int ac, char **av);
+void	sync_edge_stop(int ac, char **av);
+void	sync_centre_stop(int ac, char **av);
+void	sync_edge_clear(int ac, char **av);
+void	sync_centre_clear(int ac, char **av);
+void	sync_edge_test(int ac, char **av);
+void	sync_centre_test(int ac, char **av);
 
+void	sync_main(int ac, char **av);
 #endif

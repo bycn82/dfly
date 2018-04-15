@@ -32,8 +32,21 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _IPFW3BASIC_H_
-#define _IPFW3BASIC_H_
+#ifndef _IPFW3DUMMYNET_H_
+#define _IPFW3DUMMYNET_H_
 
 
+int	sort_q(const void *pa, const void *pb);
+
+
+void	config_dummynet(int ac, char **av);
+void	show_dummynet(int ac, char **av);
+void	show_pipes(void *data, int nbytes, int ac, char **av);
+void	show_queues(struct dn_ioc_flowset *fs, struct dn_ioc_flowqueue *q);
+void	show_flowset_parms(struct dn_ioc_flowset *fs, char *prefix);
+
+unsigned long	getbw(const char *str, u_short *flags, int kb);
+void	dummynet_flush(void);
+
+void	dummynet_main(int ac, char **av);
 #endif
