@@ -93,9 +93,9 @@ struct ipfw3_state {
 	uint32_t		dst_addr;
 	uint16_t		src_port;
 	uint16_t		dst_port;
-	u_char			proto;
 	time_t			timestamp;
 };
+#define LEN_FW3_STATE sizeof(struct ipfw3_state)
 
 int 	ip_fw3_state_cmp(struct ipfw3_state *s1, struct ipfw3_state *s2);
 RB_HEAD(fw3_state_tree, ipfw3_state);

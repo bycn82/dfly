@@ -309,9 +309,72 @@ void
 check_check_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len)
 {
-	/* TODO */
-	*cmd_val = IP_FW_PASS;
-	*cmd_ctl = IP_FW_CTL_NEXT;
+	/* state_tree 1 same direction, state_tree2 opposite direction */
+	struct fw3_state_tree *state_tree1, *state_tree2;
+	struct ip *ip = mtod((*args)->m, struct ip *);
+	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
+	struct ipfw3_state *s, *k, key;
+
+	k = &key;
+	memset(k, 0, LEN_FW3_STATE);
+
+	if ((*args)->oif == NULL) {
+		switch (ip->ip_p) {
+		case IPPROTO_TCP:
+			state_tree1 = &state_ctx->rb_tcp_in;
+			state_tree2 = &state_ctx->rb_tcp_out;
+		break;
+		case IPPROTO_UDP:
+			state_tree1 = &state_ctx->rb_udp_in;
+			state_tree2 = &state_ctx->rb_udp_out;
+		break;
+		case IPPROTO_ICMP:
+			state_tree1 = &state_ctx->rb_icmp_in;
+			state_tree2 = &state_ctx->rb_icmp_out;
+		default:
+			goto oops;
+		}
+	} else {
+		switch (ip->ip_p) {
+		case IPPROTO_TCP:
+			state_tree1 = &state_ctx->rb_tcp_out;
+			state_tree2 = &state_ctx->rb_tcp_in;
+		break;
+		case IPPROTO_UDP:
+			state_tree1 = &state_ctx->rb_udp_out;
+			state_tree2 = &state_ctx->rb_udp_in;
+		break;
+		case IPPROTO_ICMP:
+			state_tree1 = &state_ctx->rb_icmp_out;
+			state_tree2 = &state_ctx->rb_icmp_in;
+		default:
+			goto oops;
+		}
+	}
+
+	k->src_addr = (*args)->f_id.src_ip;
+	k->dst_addr = (*args)->f_id.dst_ip;
+	k->src_port = (*args)->f_id.src_port;
+	k->dst_port = (*args)->f_id.dst_port;
+	s = RB_FIND(fw3_state_tree, state_tree1, k);
+	if (s != NULL) {
+		*cmd_val = IP_FW_PASS;
+		*cmd_ctl = IP_FW_CTL_NEXT;
+		return;
+	}
+	k->dst_addr = (*args)->f_id.src_ip;
+	k->src_addr = (*args)->f_id.dst_ip;
+	k->dst_port = (*args)->f_id.src_port;
+	k->src_port = (*args)->f_id.dst_port;
+	s = RB_FIND(fw3_state_tree, state_tree2, k);
+	if (s != NULL) {
+		*cmd_val = IP_FW_PASS;
+		*cmd_ctl = IP_FW_CTL_NEXT;
+		return;
+	}
+oops:
+	*cmd_val = IP_FW_NOT_MATCH;
+	*cmd_ctl = IP_FW_CTL_NO;
 }
 
 void
@@ -546,9 +609,57 @@ void
 check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len)
 {
-	/* TODO */
+	/* state_tree 1 same direction, state_tree2 opposite direction */
+	struct fw3_state_tree *state_tree = NULL;
+	struct ip *ip = mtod((*args)->m, struct ip *);
+	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
+	struct ipfw3_state *s, *k, key;
+
+	k = &key;
+	memset(k, 0, LEN_FW3_STATE);
+
+	if ((*args)->oif == NULL) {
+		switch (ip->ip_p) {
+		case IPPROTO_TCP:
+			state_tree = &state_ctx->rb_tcp_in;
+		break;
+		case IPPROTO_UDP:
+			state_tree = &state_ctx->rb_udp_in;
+		break;
+		case IPPROTO_ICMP:
+			state_tree = &state_ctx->rb_icmp_in;
+		default:
+			*cmd_val = IP_FW_NOT_MATCH;
+		}
+	} else {
+		switch (ip->ip_p) {
+		case IPPROTO_TCP:
+			state_tree = &state_ctx->rb_tcp_out;
+		break;
+		case IPPROTO_UDP:
+			state_tree = &state_ctx->rb_udp_out;
+		break;
+		case IPPROTO_ICMP:
+			state_tree = &state_ctx->rb_icmp_out;
+		default:
+			*cmd_val = IP_FW_NOT_MATCH;
+		}
+	}
 	*cmd_ctl = IP_FW_CTL_NO;
-	*cmd_val = IP_FW_MATCH;
+	k->src_addr = (*args)->f_id.src_ip;
+	k->dst_addr = (*args)->f_id.dst_ip;
+	k->src_port = (*args)->f_id.src_port;
+	k->dst_port = (*args)->f_id.dst_port;
+	s = RB_FIND(fw3_state_tree, state_tree, k);
+	if (s == NULL) {
+		s = kmalloc(LEN_FW3_STATE, M_IPFW3_BASIC,
+				M_INTWAIT | M_NULLOK | M_ZERO);
+		s->src_addr = k->src_addr;
+		s->dst_addr = k->dst_addr;
+		s->src_port = k->src_port;
+		s->dst_port = k->dst_port;
+		RB_INSERT(fw3_state_tree, state_tree, s);
+	}
 }
 
 void
