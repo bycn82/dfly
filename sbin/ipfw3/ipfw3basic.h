@@ -35,5 +35,10 @@
 #ifndef _IPFW3BASIC_H_
 #define _IPFW3BASIC_H_
 
+void	parse_accept(ipfw_insn **cmd, int *ac, char **av[]);
+void	parse_deny(ipfw_insn **cmd, int *ac, char **av[]);
+void	show_accept(ipfw_insn *cmd, int show_or);
+void	show_deny(ipfw_insn *cmd, int show_or);
 
+void	prepare_default_funcs(void);
 #endif
