@@ -90,7 +90,7 @@ ipfw_sync_install_state_t		*ipfw_sync_install_state_prt = NULL;
 
 
 void
-ipfw_sync_install_state(struct cmd_send_state *cmd)
+ip_fw3_sync_install_state(struct cmd_send_state *cmd)
 {
 	/* TODO */
 }
@@ -185,7 +185,7 @@ ip_fw3_ctl_sync_edge_conf(struct sockopt *sopt)
 }
 
 void
-sync_edge_socket_handler(void *dummy)
+ip_fw3_sync_edge_socket_handler(void *dummy)
 {
 	struct socket *so;
 	struct sockbuf sio;
@@ -259,10 +259,10 @@ ip_fw3_ctl_sync_edge_start(struct sockopt *sopt)
 
 	fw3_sync_ctx.running |= 1;
 	soreference(fw3_sync_ctx.edge_sock);
-	error = kthread_create(sync_edge_socket_handler, NULL,
+	error = kthread_create(ip_fw3_sync_edge_socket_handler, NULL,
 			&fw3_sync_ctx.edge_td, "sync_edge_thread");
 	if (error) {
-		panic("sync_edge_socket_handler:error %d",error);
+		panic("ip_fw3_sync_edge_socket_handler:error %d",error);
 	}
 	return 0;
 }

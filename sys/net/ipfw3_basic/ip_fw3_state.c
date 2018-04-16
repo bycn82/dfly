@@ -307,7 +307,7 @@ void
 ip_fw3_state_fini(void)
 {
 	callout_stop(&ip_fw3_state_cleanup_callout);
-	ipfw_sync_install_state_prt = ipfw_sync_install_state;
+	ipfw_sync_install_state_prt = ip_fw3_sync_install_state;
 }
 
 void

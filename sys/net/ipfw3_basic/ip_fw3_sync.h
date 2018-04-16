@@ -113,24 +113,24 @@ struct netmsg_sync {
 typedef void ipfw_sync_send_state_t(struct ipfw3_state *, int cpu, int hash);
 typedef void ipfw_sync_install_state_t(struct cmd_send_state *cmd);
 
-void	ipfw_sync_install_state(struct cmd_send_state *cmd);
+void	ip_fw3_sync_install_state(struct cmd_send_state *cmd);
 
-void sync_centre_conf_dispath(netmsg_t nmsg);
-int ip_fw3_ctl_sync_centre_conf(struct sockopt *sopt);
-int ip_fw3_ctl_sync_show_conf(struct sockopt *sopt);
-int ip_fw3_ctl_sync_show_status(struct sockopt *sopt);
-int ip_fw3_ctl_sync_edge_conf(struct sockopt *sopt);
-void sync_edge_socket_handler(void *dummy);
-int ip_fw3_ctl_sync_edge_start(struct sockopt *sopt);
-int ip_fw3_ctl_sync_edge_test(struct sockopt *sopt);
-int ip_fw3_ctl_sync_centre_start(struct sockopt *sopt);
-int ip_fw3_ctl_sync_centre_test(struct sockopt *sopt);
-int ip_fw3_ctl_sync_edge_stop(struct sockopt *sopt);
-int ip_fw3_ctl_sync_centre_stop(struct sockopt *sopt);
-int ip_fw3_ctl_sync_edge_clear(struct sockopt *sopt);
-int ip_fw3_ctl_sync_centre_clear(struct sockopt *sopt);
-int ip_fw3_ctl_sync_sockopt(struct sockopt *sopt);
-void ip_fw3_sync_send_state(struct ipfw3_state *state, int cpu, int hash);
+void 	ip_fw3_sync_centre_conf_dispath(netmsg_t nmsg);
+int 	ip_fw3_ctl_sync_centre_conf(struct sockopt *sopt);
+int 	ip_fw3_ctl_sync_show_conf(struct sockopt *sopt);
+int 	ip_fw3_ctl_sync_show_status(struct sockopt *sopt);
+int 	ip_fw3_ctl_sync_edge_conf(struct sockopt *sopt);
+void 	ip_fw3_sync_edge_socket_handler(void *dummy);
+int 	ip_fw3_ctl_sync_edge_start(struct sockopt *sopt);
+int 	ip_fw3_ctl_sync_edge_test(struct sockopt *sopt);
+int 	ip_fw3_ctl_sync_centre_start(struct sockopt *sopt);
+int 	ip_fw3_ctl_sync_centre_test(struct sockopt *sopt);
+int 	ip_fw3_ctl_sync_edge_stop(struct sockopt *sopt);
+int 	ip_fw3_ctl_sync_centre_stop(struct sockopt *sopt);
+int 	ip_fw3_ctl_sync_edge_clear(struct sockopt *sopt);
+int 	ip_fw3_ctl_sync_centre_clear(struct sockopt *sopt);
+int 	ip_fw3_ctl_sync_sockopt(struct sockopt *sopt);
+void 	ip_fw3_sync_send_state(struct ipfw3_state *state, int cpu, int hash);
 
 #endif /* _KERNEL */
 #endif /* _IP_FW3_SYNC_H_ */

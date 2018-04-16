@@ -73,14 +73,14 @@ struct ipfw3_state_context {
 
 
 
+void	ip_fw3_state_cleanup_dispatch(netmsg_t nmsg);
+void	ip_fw3_state_cleanup(void *dummy __unused);
 void	ip_fw3_state_append_dispatch(netmsg_t nmsg);
 void	ip_fw3_state_delete_dispatch(netmsg_t nmsg);
 int	ip_fw3_ctl_state_add(struct sockopt *sopt);
 int	ip_fw3_ctl_state_delete(struct sockopt *sopt);
 int	ip_fw3_ctl_state_flush(struct sockopt *sopt);
 int	ip_fw3_ctl_state_get(struct sockopt *sopt);
-void	ip_fw3_state_cleanup_dispatch(netmsg_t nmsg);
-void	ip_fw3_state_cleanup(void *dummy __unused);
 int	ip_fw3_ctl_state_sockopt(struct sockopt *sopt);
 
 void	ip_fw3_state_fini(void);
