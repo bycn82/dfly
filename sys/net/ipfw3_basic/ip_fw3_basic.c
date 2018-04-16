@@ -825,16 +825,58 @@ ip_fw3_basic_add_state(struct ipfw_ioc_state *ioc_state)
 	/* TODO */
 }
 
-/*
- * if rule is NULL
- * 		flush all states
- * else
- * 		flush states which stub is the rule
- */
+void
+ip_fw3_basic_flush_state_dispatch(netmsg_t nmsg)
+{
+	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
+	struct ipfw3_state *s, *tmp;
+
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
+}
+
 static void
 ip_fw3_basic_flush_state(struct ip_fw *rule)
 {
-
+	struct netmsg_base msg;
+	netmsg_init(&msg, NULL, &curthread->td_msgport, 0,
+			ip_fw3_basic_flush_state_dispatch);
+	netisr_domsg(&msg, 0);
 }
 
 
