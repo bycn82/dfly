@@ -76,12 +76,52 @@
 #include <net/ipfw3_basic/ip_fw3_sync.h>
 #include <net/ipfw3_basic/ip_fw3_state.h>
 
+struct ipfw3_state_context 		*fw3_state_ctx[MAXCPU];
 extern struct ipfw3_context		*fw3_ctx[MAXCPU];
-extern struct ipfw3_state_context 	*fw3_state_ctx[MAXCPU];
 
-extern int 				sysctl_var_icmp_timeout;
-extern int 				sysctl_var_tcp_timeout;
-extern int 				sysctl_var_udp_timeout;
+
+static struct callout 		ip_fw3_state_cleanup_callout;
+static int 			sysctl_var_cleanup_interval = 1;
+
+static int 			sysctl_var_state_max_tcp_in = 4096;
+static int 			sysctl_var_state_max_udp_in = 4096;
+static int 			sysctl_var_state_max_icmp_in = 10;
+
+static int 			sysctl_var_state_max_tcp_out = 4096;
+static int 			sysctl_var_state_max_udp_out = 4096;
+static int 			sysctl_var_state_max_icmp_out = 10;
+
+static int 			sysctl_var_icmp_timeout = 10;
+static int 			sysctl_var_tcp_timeout = 60;
+static int 			sysctl_var_udp_timeout = 30;
+
+
+SYSCTL_NODE(_net_inet_ip, OID_AUTO, fw3_basic, CTLFLAG_RW, 0, "Firewall Basic");
+
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_tcp_in, CTLFLAG_RW,
+		&sysctl_var_state_max_tcp_in, 0, "maximum of tcp state in");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_tcp_out, CTLFLAG_RW,
+		&sysctl_var_state_max_tcp_out, 0, "maximum of tcp state out");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_udp_in, CTLFLAG_RW,
+		&sysctl_var_state_max_udp_in, 0, "maximum of udp state in");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_udp_out, CTLFLAG_RW,
+		&sysctl_var_state_max_udp_out, 0, "maximum of udp state out");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_icmp_in, CTLFLAG_RW,
+		&sysctl_var_state_max_icmp_in, 0, "maximum of icmp state in");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_icmp_out, CTLFLAG_RW,
+		&sysctl_var_state_max_icmp_out, 0, "maximum of icmp state out");
+
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, cleanup_interval, CTLFLAG_RW,
+		&sysctl_var_cleanup_interval, 0,
+		"default state expiry check interval");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, icmp_timeout, CTLFLAG_RW,
+		&sysctl_var_icmp_timeout, 0, "default icmp state life time");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, tcp_timeout, CTLFLAG_RW,
+		&sysctl_var_tcp_timeout, 0, "default tcp state life time");
+SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, udp_timeout, CTLFLAG_RW,
+		&sysctl_var_udp_timeout, 0, "default udp state life time");
+
+
 
 MALLOC_DEFINE(M_IPFW3_STATE, "M_IPFW3_STATE", "mem for ipfw3 states");
 
@@ -114,38 +154,38 @@ ip_fw3_state_cmp(struct ipfw3_state *s1, struct ipfw3_state *s2)
 }
 
 void
-ip_fw3_append_state_dispatch(netmsg_t nmsg)
+ip_fw3_state_append_dispatch(netmsg_t nmsg)
 {
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 
 void
-ip_fw3_delete_state_dispatch(netmsg_t nmsg)
+ip_fw3_state_delete_dispatch(netmsg_t nmsg)
 {
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 
 int
-ip_fw3_ctl_add_state(struct sockopt *sopt)
+ip_fw3_ctl_state_add(struct sockopt *sopt)
 {
 	return 0;
 }
 
 int
-ip_fw3_ctl_delete_state(struct sockopt *sopt)
+ip_fw3_ctl_state_delete(struct sockopt *sopt)
 {
 	return 0;
 }
 
 int
-ip_fw3_ctl_flush_state(struct sockopt *sopt)
+ip_fw3_ctl_state_flush(struct sockopt *sopt)
 {
 
 	return 0;
 }
 
 int
-ip_fw3_ctl_get_state(struct sockopt *sopt)
+ip_fw3_ctl_state_get(struct sockopt *sopt)
 {
 	struct ipfw3_state_context *state_ctx;
 	struct ipfw3_state *s;
@@ -183,7 +223,63 @@ nospace:
 	return 0;
 }
 
+void
+ip_fw3_state_cleanup_dispatch(netmsg_t nmsg)
+{
+	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
+	struct ipfw3_state *s, *tmp;
 
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_in, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_icmp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_in, s);
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_out, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_icmp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_out, s);
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_in, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_tcp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_in, s);
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_out, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_tcp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_out, s);
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_in, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_udp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_in, s);
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_out, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_udp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_out, s);
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
+}
+
+void
+ip_fw3_state_cleanup(void *dummy __unused)
+{
+	struct netmsg_base msg;
+	netmsg_init(&msg, NULL, &curthread->td_msgport, 0,
+			ip_fw3_state_cleanup_dispatch);
+	netisr_domsg(&msg, 0);
+
+	callout_reset(&ip_fw3_state_cleanup_callout,
+			sysctl_var_cleanup_interval * hz,
+			ip_fw3_state_cleanup, NULL);
+}
 
 int
 ip_fw3_ctl_state_sockopt(struct sockopt *sopt)
@@ -191,18 +287,32 @@ ip_fw3_ctl_state_sockopt(struct sockopt *sopt)
 	int error = 0;
 	switch (sopt->sopt_name) {
 		case IP_FW_STATE_ADD:
-			error = ip_fw3_ctl_add_state(sopt);
+			error = ip_fw3_ctl_state_add(sopt);
 			break;
 		case IP_FW_STATE_DEL:
-			error = ip_fw3_ctl_delete_state(sopt);
+			error = ip_fw3_ctl_state_delete(sopt);
 			break;
 		case IP_FW_STATE_FLUSH:
-			error = ip_fw3_ctl_flush_state(sopt);
+			error = ip_fw3_ctl_state_flush(sopt);
 			break;
 		case IP_FW_STATE_GET:
-			error = ip_fw3_ctl_get_state(sopt);
+			error = ip_fw3_ctl_state_get(sopt);
 			break;
 	}
 	return error;
 }
+void
+ip_fw3_state_fini(void)
+{
+	callout_stop(&ip_fw3_state_cleanup_callout);
+}
 
+void
+ip_fw3_state_init(void)
+{
+	callout_init_mp(&ip_fw3_state_cleanup_callout);
+	callout_reset(&ip_fw3_state_cleanup_callout,
+			sysctl_var_cleanup_interval * hz,
+			ip_fw3_state_cleanup,
+			NULL);
+}

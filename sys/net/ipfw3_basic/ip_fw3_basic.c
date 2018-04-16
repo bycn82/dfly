@@ -80,57 +80,29 @@
 
 MALLOC_DEFINE(M_IP_FW3_BASIC, "IPFW3_BASIC", "ipfw3_basic module");
 
-struct ipfw3_state_context 		*fw3_state_ctx[MAXCPU];
-
 extern struct ipfw3_context		*fw3_ctx[MAXCPU];
 extern struct ipfw3_sync_context 	fw3_sync_ctx;
+extern struct ipfw3_state_context 	*fw3_state_ctx[MAXCPU];
+
 extern int 				sysctl_var_fw3_verbose;
 extern ipfw_basic_delete_state_t 	*ipfw_basic_flush_state_prt;
 extern ipfw_basic_append_state_t 	*ipfw_basic_append_state_prt;
 extern ipfw_sync_send_state_t 		*ipfw_sync_send_state_prt;
 extern ipfw_sync_install_state_t 	*ipfw_sync_install_state_prt;
 
-static struct callout 		ip_fw3_basic_cleanup_callout;
-static int 			sysctl_var_cleanup_interval = 1;
+extern int 			sysctl_var_state_max_tcp_in;
+extern int 			sysctl_var_state_max_udp_in;
+extern int 			sysctl_var_state_max_icmp_in;
 
-static int 			sysctl_var_state_max_tcp_in = 4096;
-static int 			sysctl_var_state_max_udp_in = 4096;
-static int 			sysctl_var_state_max_icmp_in = 10;
+extern int 			sysctl_var_state_max_tcp_out;
+extern int 			sysctl_var_state_max_udp_out;
+extern int 			sysctl_var_state_max_icmp_out;
 
-static int 			sysctl_var_state_max_tcp_out = 4096;
-static int 			sysctl_var_state_max_udp_out = 4096;
-static int 			sysctl_var_state_max_icmp_out = 10;
-
-static int 			sysctl_var_icmp_timeout = 10;
-static int 			sysctl_var_tcp_timeout = 60;
-static int 			sysctl_var_udp_timeout = 30;
+extern int 			sysctl_var_icmp_timeout;
+extern int 			sysctl_var_tcp_timeout;
+extern int 			sysctl_var_udp_timeout;
 
 void	ipfw_sync_install_state(struct cmd_send_state *cmd);
-
-SYSCTL_NODE(_net_inet_ip, OID_AUTO, fw3_basic, CTLFLAG_RW, 0, "Firewall Basic");
-
-SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_tcp_in, CTLFLAG_RW,
-		&sysctl_var_state_max_tcp_in, 0, "maximum of tcp state in");
-SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_tcp_out, CTLFLAG_RW,
-		&sysctl_var_state_max_tcp_out, 0, "maximum of tcp state out");
-SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_udp_in, CTLFLAG_RW,
-		&sysctl_var_state_max_udp_in, 0, "maximum of udp state in");
-SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_udp_out, CTLFLAG_RW,
-		&sysctl_var_state_max_udp_out, 0, "maximum of udp state out");
-SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_icmp_in, CTLFLAG_RW,
-		&sysctl_var_state_max_icmp_in, 0, "maximum of icmp state in");
-SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, state_max_icmp_out, CTLFLAG_RW,
-		&sysctl_var_state_max_icmp_out, 0, "maximum of icmp state out");
-
-SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, cleanup_interval, CTLFLAG_RW,
-		&sysctl_var_cleanup_interval, 0,
-		"default state expiry check interval");
-SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, icmp_timeout, CTLFLAG_RW,
-		&sysctl_var_icmp_timeout, 0, "default icmp state life time");
-SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, tcp_timeout, CTLFLAG_RW,
-		&sysctl_var_tcp_timeout, 0, "default tcp state life time");
-SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, udp_timeout, CTLFLAG_RW,
-		&sysctl_var_udp_timeout, 0, "default udp state life time");
 
 
 static struct ip_fw *lookup_next_rule(struct ip_fw *me);
@@ -791,7 +763,7 @@ check_dst_n_port(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 
 
 
-static void
+void
 ip_fw3_basic_add_state(struct ipfw_ioc_state *ioc_state)
 {
 	/* TODO */
@@ -842,7 +814,7 @@ ip_fw3_basic_flush_state_dispatch(netmsg_t nmsg)
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 
-static void
+void
 ip_fw3_basic_flush_state(struct ip_fw *rule)
 {
 	struct netmsg_base msg;
@@ -852,65 +824,7 @@ ip_fw3_basic_flush_state(struct ip_fw *rule)
 }
 
 
-static void
-ip_fw3_basic_cleanup_func_dispatch(netmsg_t nmsg)
-{
-	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
-	struct ipfw3_state *s, *tmp;
-
-	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_in, tmp) {
-		if (time_uptime - s->timestamp > sysctl_var_icmp_timeout) {
-			RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_in, s);
-			kfree(s, M_IP_FW3_BASIC);
-		}
-	}
-	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_out, tmp) {
-		if (time_uptime - s->timestamp > sysctl_var_icmp_timeout) {
-			RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_out, s);
-			kfree(s, M_IP_FW3_BASIC);
-		}
-	}
-	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_in, tmp) {
-		if (time_uptime - s->timestamp > sysctl_var_tcp_timeout) {
-			RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_in, s);
-			kfree(s, M_IP_FW3_BASIC);
-		}
-	}
-	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_out, tmp) {
-		if (time_uptime - s->timestamp > sysctl_var_tcp_timeout) {
-			RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_out, s);
-			kfree(s, M_IP_FW3_BASIC);
-		}
-	}
-	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_in, tmp) {
-		if (time_uptime - s->timestamp > sysctl_var_udp_timeout) {
-			RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_in, s);
-			kfree(s, M_IP_FW3_BASIC);
-		}
-	}
-	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_out, tmp) {
-		if (time_uptime - s->timestamp > sysctl_var_udp_timeout) {
-			RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_out, s);
-			kfree(s, M_IP_FW3_BASIC);
-		}
-	}
-	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
-}
-
-static void
-ip_fw3_basic_cleanup_func(void *dummy __unused)
-{
-	struct netmsg_base msg;
-	netmsg_init(&msg, NULL, &curthread->td_msgport, 0,
-			ip_fw3_basic_cleanup_func_dispatch);
-	netisr_domsg(&msg, 0);
-
-	callout_reset(&ip_fw3_basic_cleanup_callout,
-			sysctl_var_cleanup_interval * hz,
-			ip_fw3_basic_cleanup_func, NULL);
-}
-
-static void
+void
 ipfw_basic_init_dispatch(netmsg_t msg)
 {
 	struct ipfw3_state_context *tmp;
@@ -926,7 +840,7 @@ ipfw_basic_init_dispatch(netmsg_t msg)
 	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
 }
 
-static int
+int
 ip_fw3_basic_init(void)
 {
 	struct netmsg_base msg;
@@ -997,16 +911,10 @@ ip_fw3_basic_init(void)
 			0, ipfw_basic_init_dispatch);
 	netisr_domsg(&msg, 0);
 
-
-	callout_init_mp(&ip_fw3_basic_cleanup_callout);
-	callout_reset(&ip_fw3_basic_cleanup_callout,
-			sysctl_var_cleanup_interval * hz,
-			ip_fw3_basic_cleanup_func,
-			NULL);
 	return 0;
 }
 
-static void
+void
 ip_fw3_basic_fini_dispatch(netmsg_t msg)
 {
 	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
@@ -1053,12 +961,12 @@ ip_fw3_basic_fini_dispatch(netmsg_t msg)
 	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
 }
 
-static int
+int
 ip_fw3_basic_fini(void)
 {
 	struct netmsg_base msg;
 
-	callout_stop(&ip_fw3_basic_cleanup_callout);
+
 
 
 	netmsg_init(&msg, NULL, &curthread->td_msgport,
