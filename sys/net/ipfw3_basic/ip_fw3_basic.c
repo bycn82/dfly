@@ -89,15 +89,16 @@ extern ipfw_sync_send_state_t 		*ipfw_sync_send_state_prt;
 extern ipfw_sync_install_state_t 	*ipfw_sync_install_state_prt;
 
 static struct callout 		ip_fw3_basic_cleanup_callout;
+static int 			sysctl_var_cleanup_interval = 1;
 
 static int 			sysctl_var_state_max_tcp_in = 4096;
 static int 			sysctl_var_state_max_udp_in = 4096;
 static int 			sysctl_var_state_max_icmp_in = 10;
+
 static int 			sysctl_var_state_max_tcp_out = 4096;
 static int 			sysctl_var_state_max_udp_out = 4096;
 static int 			sysctl_var_state_max_icmp_out = 10;
 
-static int 			sysctl_var_cleanup_interval = 1;
 static int 			sysctl_var_icmp_timeout = 10;
 static int 			sysctl_var_tcp_timeout = 60;
 static int 			sysctl_var_udp_timeout = 30;
@@ -840,7 +841,45 @@ ip_fw3_basic_flush_state(struct ip_fw *rule)
 static void
 ip_fw3_basic_cleanup_func_dispatch(netmsg_t nmsg)
 {
-	/* TODO */
+	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
+	struct ipfw3_state *s, *tmp;
+
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_in, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_icmp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_in, s);
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_out, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_icmp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_out, s);
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_in, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_tcp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_in, s);
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_out, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_tcp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_out, s);
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_in, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_udp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_in, s);
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_out, tmp) {
+		if (time_uptime - s->timestamp > sysctl_var_udp_timeout) {
+			RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_out, s);
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 
