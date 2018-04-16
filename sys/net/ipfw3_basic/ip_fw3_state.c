@@ -83,6 +83,8 @@ extern int 				sysctl_var_icmp_timeout;
 extern int 				sysctl_var_tcp_timeout;
 extern int 				sysctl_var_udp_timeout;
 
+MALLOC_DEFINE(M_IPFW3_STATE, "M_IPFW3_STATE", "mem for ipfw3 states");
+
 RB_GENERATE(fw3_state_tree, ipfw3_state, entries, ip_fw3_state_cmp);
 
 int
