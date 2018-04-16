@@ -76,7 +76,7 @@
 #include <net/ethernet.h>
 
 #include <net/ipfw3/ip_fw.h>
-#include <net/ipfw3/ip_fw3_sync.h>
+#include <net/ipfw3_basic/ip_fw3_sync.h>
 
 #define LEN_IN_ADDR		sizeof(struct in_addr)
 

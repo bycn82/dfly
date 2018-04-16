@@ -81,43 +81,25 @@ enum ipfw_basic_opcodes {
 		((state->expiry != 0) && (state->expiry < time_second))
 
 
+struct ipfw_ioc_state {
+	struct in_addr		src_addr;
+	struct in_addr		dst_addr;
+	u_short			src_port;
+	u_short			dst_port;
+	int			cpu_id;
+	int			proto;
+	int			direction;
+	time_t			life;
+};
+#define LEN_IOC_FW3_STATE sizeof(struct ipfw_ioc_state);
+
+
 
 
 #ifdef _KERNEL
 
+#include <net/ipfw3_basic/ip_fw3_state.h>
 
-
-struct ipfw3_state {
-	RB_ENTRY(ipfw3_state)	entries;
-	uint32_t		src_addr;
-	uint32_t		dst_addr;
-	uint16_t		src_port;
-	uint16_t		dst_port;
-	struct ip_fw		*stub;
-	time_t			timestamp;
-};
-#define LEN_FW3_STATE sizeof(struct ipfw3_state)
-
-int 	ip_fw3_state_cmp(struct ipfw3_state *s1, struct ipfw3_state *s2);
-RB_HEAD(fw3_state_tree, ipfw3_state);
-
-/* place to hold the states */
-struct ipfw3_state_context {
-	struct fw3_state_tree	rb_tcp_in;
-	struct fw3_state_tree	rb_tcp_out;
-	struct fw3_state_tree	rb_udp_in;
-	struct fw3_state_tree	rb_udp_out;
-	struct fw3_state_tree	rb_icmp_in;
-	struct fw3_state_tree	rb_icmp_out;
-
-	int		count_tcp_in;
-	int		count_tcp_out;
-	int		count_udp_in;
-	int		count_udp_out;
-	int		count_icmp_in;
-	int		count_icmp_out;
-};
-#define LEN_STATE_CTX sizeof(struct ipfw3_state_context)
 
 typedef void ipfw_sync_send_state_t(struct ipfw3_state *, int cpu, int hash);
 
@@ -181,5 +163,9 @@ int 	count_match_state(ipfw_insn *cmd, struct ipfw_flow_id *fid,
 		struct ipfw3_state *state, int *count);
 
 void	ip_fw3_basic_flush_state_dispatch(netmsg_t nmsg);
+
+typedef void ipfw_basic_delete_state_t(struct ip_fw *);
+typedef void ipfw_basic_append_state_t(struct ipfw_ioc_state *);
+
 #endif	/* _KERNEL */
 #endif

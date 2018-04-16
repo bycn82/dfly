@@ -34,11 +34,6 @@
  * SUCH DAMAGE.
  */
 
-#include "opt_inet.h"
-#ifndef INET
-#error IPFIREWALL3 requires INET.
-#endif
-
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -72,7 +67,7 @@
 #endif
 
 #include <net/ipfw3/ip_fw.h>
-#include <net/ipfw3/ip_fw3_log.h>
+#include <net/ipfw3_basic/ip_fw3_log.h>
 
 extern int sysctl_var_fw3_verbose;
 extern struct if_clone *if_clone_lookup(const char *, int *);

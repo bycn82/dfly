@@ -2,10 +2,7 @@
 # $DragonFly: src/sys/net/ipfw/Makefile,v 1.6 2008/09/16 12:16:08 sephe Exp $
 
 KMOD=	ipfw3
-SRCS=	ip_fw3.c
-SRCS+=	ip_fw3_log.c ip_fw3_log.h
-SRCS+=  ip_fw3_table.c ip_fw3_table.h
-SRCS+=  ip_fw3_sync.c ip_fw3_sync.h
+SRCS=	ip_fw3.c ip_fw3.h
 SRCS+=	opt_ipfw.h opt_inet.h
 
 .ifndef BUILDING_WITH_KERNEL

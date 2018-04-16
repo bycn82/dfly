@@ -72,106 +72,73 @@
 #include <netinet/if_ether.h>
 
 #include <net/ipfw3/ip_fw.h>
-#include <net/ipfw3/ip_fw3_table.h>
-#include <net/ipfw3/ip_fw3_sync.h>
+#include <net/ipfw3_basic/ip_fw3_table.h>
+#include <net/ipfw3_basic/ip_fw3_sync.h>
+#include <net/ipfw3_basic/ip_fw3_state.h>
 
-#include "ip_fw3_state.h"
+extern struct ipfw3_context		*fw3_ctx[MAXCPU];
+extern struct ipfw3_state_context 	*fw3_state_ctx[MAXCPU];
+
+extern int 				sysctl_var_icmp_timeout;
+extern int 				sysctl_var_tcp_timeout;
+extern int 				sysctl_var_udp_timeout;
+
+RB_GENERATE(fw3_state_tree, ipfw3_state, entries, ip_fw3_state_cmp);
+
+int
+ip_fw3_state_cmp(struct ipfw3_state *s1, struct ipfw3_state *s2)
+{
+	if (s1->src_addr > s2->src_addr)
+		return 1;
+	if (s1->src_addr < s2->src_addr)
+		return -1;
+
+	if (s1->dst_addr > s2->dst_addr)
+		return 1;
+	if (s1->dst_addr < s2->dst_addr)
+		return -1;
+
+	if (s1->src_port > s2->src_port)
+		return 1;
+	if (s1->src_port < s2->src_port)
+		return -1;
+
+	if (s1->dst_port > s2->dst_port)
+		return 1;
+	if (s1->dst_port < s2->dst_port)
+		return -1;
+
+	return 0;
+}
 
 void
 ip_fw3_append_state_dispatch(netmsg_t nmsg)
 {
-	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
-	struct ipfw_ioc_state *ioc_state = dmsg->ioc_state;
-	(*ipfw_basic_append_state_prt)(ioc_state);
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 
 void
 ip_fw3_delete_state_dispatch(netmsg_t nmsg)
 {
-	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
-	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
-	struct ip_fw *rule = ctx->ipfw_rule_chain;
-	while (rule != NULL) {
-		if (rule->rulenum == dmsg->rulenum) {
-			break;
-		}
-		rule = rule->next;
-	}
-
-	(*ipfw_basic_flush_state_prt)(rule);
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 
 int
 ip_fw3_ctl_add_state(struct sockopt *sopt)
 {
-	struct ipfw_ioc_state *ioc_state;
-	ioc_state = sopt->sopt_val;
-	if (ipfw_basic_append_state_prt != NULL) {
-		struct netmsg_del dmsg;
-		bzero(&dmsg, sizeof(dmsg));
-		netmsg_init(&dmsg.base, NULL, &curthread->td_msgport,
-			0, ip_fw3_append_state_dispatch);
-		(&dmsg)->ioc_state = ioc_state;
-		netisr_domsg(&dmsg.base, 0);
-	}
 	return 0;
 }
 
 int
 ip_fw3_ctl_delete_state(struct sockopt *sopt)
 {
-	int rulenum = 0, error;
-	if (sopt->sopt_valsize != 0) {
-		error = soopt_to_kbuf(sopt, &rulenum, sizeof(int), sizeof(int));
-		if (error) {
-			return -1;
-		}
-	}
-	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
-	struct ip_fw *rule = ctx->ipfw_rule_chain;
-
-	while (rule!=NULL) {
-		if (rule->rulenum == rulenum) {
-			break;
-		}
-		rule = rule->next;
-	}
-	if (rule == NULL) {
-		return -1;
-	}
-
-	struct netmsg_del dmsg;
-	struct netmsg_base *nmsg;
-	/*
-	 * delete the state which stub is the rule
-	 * which belongs to the CPU and the rulenum
-	 */
-	bzero(&dmsg, sizeof(dmsg));
-	nmsg = &dmsg.base;
-	netmsg_init(nmsg, NULL, &curthread->td_msgport,
-			0, ip_fw3_delete_state_dispatch);
-	dmsg.rulenum = rulenum;
-	netisr_domsg(nmsg, 0);
 	return 0;
 }
 
 int
 ip_fw3_ctl_flush_state(struct sockopt *sopt)
 {
-	struct netmsg_del dmsg;
-	struct netmsg_base *nmsg;
-	/*
-	 * delete the state which stub is the rule
-	 * which belongs to the CPU and the rulenum
-	 */
-	bzero(&dmsg, sizeof(dmsg));
-	nmsg = &dmsg.base;
-	netmsg_init(nmsg, NULL, &curthread->td_msgport,
-			0, ip_fw3_delete_state_dispatch);
-	dmsg.rulenum = 0;
-	netisr_domsg(nmsg, 0);
+
 	return 0;
 }
 
@@ -187,26 +154,24 @@ ip_fw3_ctl_get_state(struct sockopt *sopt)
 	sopt_size = sopt->sopt_valsize;
 	ioc = (struct ipfw_ioc_state *)sopt->sopt_val;
 	/* icmp states only in CPU 0 */
-	int cpu = 0, n;
+	int cpu = 0;
 
 	/* udp states */
 	for (cpu = 0; cpu < ncpus; cpu++) {
 		state_ctx = fw3_state_ctx[cpu];
-		for (n = 0; n < NAT_ID_MAX; n++) {
-			RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_udp_out) {
-					total_len += LEN_IOC_FW3_STATE;
-					if (total_len > sopt_size)
-						goto nospace;
-					ioc->src_addr.s_addr = ntohl(s->src_addr);
-					ioc->dst_addr.s_addr = s->dst_addr;
-					ioc->src_port = s->src_port;
-					ioc->dst_port = s->dst_port;
-					ioc->cpu_id = cpu;
-					ioc->proto = IPPROTO_UDP;
-					ioc->life = s->timestamp +
-						sysctl_var_udp_timeout - time_uptime;
-					ioc++;
-			}
+		RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_udp_out) {
+				total_len += LEN_IOC_FW3_STATE;
+				if (total_len > sopt_size)
+					goto nospace;
+				ioc->src_addr.s_addr = ntohl(s->src_addr);
+				ioc->dst_addr.s_addr = s->dst_addr;
+				ioc->src_port = s->src_port;
+				ioc->dst_port = s->dst_port;
+				ioc->cpu_id = cpu;
+				ioc->proto = IPPROTO_UDP;
+				ioc->life = s->timestamp +
+					sysctl_var_udp_timeout - time_uptime;
+				ioc++;
 		}
 	}
 

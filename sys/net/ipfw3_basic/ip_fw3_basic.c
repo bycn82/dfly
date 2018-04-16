@@ -48,6 +48,7 @@
 #include <sys/ucred.h>
 #include <sys/lock.h>
 #include <sys/mplock2.h>
+#include <sys/tree.h>
 
 #include <net/if.h>
 #include <net/ethernet.h>
@@ -72,15 +73,16 @@
 #include <netinet/if_ether.h>
 
 #include <net/ipfw3/ip_fw.h>
-#include <net/ipfw3/ip_fw3_table.h>
-#include <net/ipfw3/ip_fw3_sync.h>
-
-#include "ip_fw3_basic.h"
+#include <net/ipfw3_basic/ip_fw3_table.h>
+#include <net/ipfw3_basic/ip_fw3_sync.h>
+#include <net/ipfw3_basic/ip_fw3_basic.h>
+#include <net/ipfw3_basic/ip_fw3_state.h>
 
 MALLOC_DEFINE(M_IP_FW3_BASIC, "IPFW3_BASIC", "ipfw3_basic module");
 
-extern struct ipfw3_context		*fw3_ctx[MAXCPU];
 struct ipfw3_state_context 		*fw3_state_ctx[MAXCPU];
+
+extern struct ipfw3_context		*fw3_ctx[MAXCPU];
 extern struct ipfw3_sync_context 	fw3_sync_ctx;
 extern int 				sysctl_var_fw3_verbose;
 extern ipfw_basic_delete_state_t 	*ipfw_basic_flush_state_prt;
@@ -130,36 +132,6 @@ SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, tcp_timeout, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, udp_timeout, CTLFLAG_RW,
 		&sysctl_var_udp_timeout, 0, "default udp state life time");
 
-
-RB_PROTOTYPE(fw3_state_tree, ipfw3_state, entries, ip_fw3_state_cmp);
-RB_GENERATE(fw3_state_tree, ipfw3_state, entries, ip_fw3_state_cmp);
-
-
-int
-ip_fw3_state_cmp(struct ipfw3_state *s1, struct ipfw3_state *s2)
-{
-	if (s1->src_addr > s2->src_addr)
-		return 1;
-	if (s1->src_addr < s2->src_addr)
-		return -1;
-
-	if (s1->dst_addr > s2->dst_addr)
-		return 1;
-	if (s1->dst_addr < s2->dst_addr)
-		return -1;
-
-	if (s1->src_port > s2->src_port)
-		return 1;
-	if (s1->src_port < s2->src_port)
-		return -1;
-
-	if (s1->dst_port > s2->dst_port)
-		return 1;
-	if (s1->dst_port < s2->dst_port)
-		return -1;
-
-	return 0;
-}
 
 static struct ip_fw *lookup_next_rule(struct ip_fw *me);
 static int iface_match(struct ifnet *ifp, ipfw_insn_if *cmd);

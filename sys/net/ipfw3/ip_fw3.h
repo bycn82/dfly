@@ -361,18 +361,6 @@ struct ipfw_ioc_rule {
 	(sizeof(struct ipfw_ioc_rule) + (rule)->cmd_len * 4 - SIZE_OF_IPFWINSN)
 
 
-struct ipfw_ioc_state {
-	struct in_addr		src_addr;
-	struct in_addr		dst_addr;
-	u_short			src_port;
-	u_short			dst_port;
-	int			cpu_id;
-	int			proto;
-	int			direction;
-	time_t			life;
-};
-#define LEN_IOC_FW3_STATE sizeof(struct ipfw_ioc_state);
-
 /* IP_FW_X header/opcodes */
 typedef struct _ip_fw_x_header {
 	uint16_t opcode;	/* Operation opcode */
@@ -559,11 +547,6 @@ struct ipfw3_module{
 #define MATCH_UNKNOWN	3
 
 #define L3HDR(T, ip) ((T *)((uint32_t *)(ip) + (ip)->ip_hl))
-
-
-
-typedef void ipfw_basic_delete_state_t(struct ip_fw *);
-typedef void ipfw_basic_append_state_t(struct ipfw_ioc_state *);
 
 
 #endif /* _KERNEL */

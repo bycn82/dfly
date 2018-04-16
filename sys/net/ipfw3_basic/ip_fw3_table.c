@@ -73,7 +73,7 @@
 #include <net/ethernet.h>
 
 #include <net/ipfw3/ip_fw.h>
-#include <net/ipfw3/ip_fw3_table.h>
+#include <net/ipfw3_basic/ip_fw3_table.h>
 
 MALLOC_DEFINE(M_IPFW3_TABLE, "IPFW3_TABLE", "mem for ip_fw3 table");
 
