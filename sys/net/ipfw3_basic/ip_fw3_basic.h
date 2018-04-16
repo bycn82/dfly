@@ -37,7 +37,7 @@
 #define MODULE_BASIC_ID		0
 #define MODULE_BASIC_NAME 	"basic"
 
-enum ipfw_basic_opcodes {
+enum ipfw3_basic_opcodes {
 	O_BASIC_ACCEPT,		/* accept */
 	O_BASIC_DENY,		/* deny */
 	O_BASIC_COUNT,		/* count */
@@ -97,6 +97,9 @@ struct ipfw_ioc_state {
 
 
 #ifdef _KERNEL
+
+
+
 
 #include <net/ipfw3_basic/ip_fw3_state.h>
 

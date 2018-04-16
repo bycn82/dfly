@@ -480,18 +480,7 @@ void ip_fw3_register_module(int module_id,char *module_name);
 int ip_fw3_unregister_module(int module_id);
 
 
-
-
-
-
-
-
-
 #define IPFW_USR_F_NORULE	0x01
-
-
-
-
 
 struct ipfw_ioc_flowid {
 	uint16_t	type;	/* ETHERTYPE_ */
@@ -533,12 +522,6 @@ struct ipfw3_module{
 	int id;
 	char name[20];
 };
-
-
-
-
-
-
 
 
 #define MATCH_REVERSE	0
