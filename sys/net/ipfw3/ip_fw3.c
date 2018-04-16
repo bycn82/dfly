@@ -851,31 +851,6 @@ ip_fw3_flush_rule_dispatch(netmsg_t nmsg)
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 
-static void
-ip_fw3_append_state_dispatch(netmsg_t nmsg)
-{
-	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
-	struct ipfw_ioc_state *ioc_state = dmsg->ioc_state;
-	(*ipfw_basic_append_state_prt)(ioc_state);
-	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
-}
-
-static void
-ip_fw3_delete_state_dispatch(netmsg_t nmsg)
-{
-	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
-	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
-	struct ip_fw *rule = ctx->ipfw_rule_chain;
-	while (rule != NULL) {
-		if (rule->rulenum == dmsg->rulenum) {
-			break;
-		}
-		rule = rule->next;
-	}
-
-	(*ipfw_basic_flush_state_prt)(rule);
-	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
-}
 
 /*
  * Deletes all rules from a chain (including the default rule
@@ -885,7 +860,6 @@ ip_fw3_delete_state_dispatch(netmsg_t nmsg)
 static void
 ip_fw3_ctl_flush_rule(int kill_default)
 {
-	struct netmsg_del dmsg;
 	struct netmsg_base nmsg;
 	struct lwkt_msg *lmsg;
 
@@ -905,16 +879,6 @@ ip_fw3_ctl_flush_rule(int kill_default)
 		netmsg_service_sync();
 	}
 
-	/*
-	 * if ipfw_basic_flush_state_prt
-	 * flush all states in all CPU
-	 */
-	if (ipfw_basic_flush_state_prt != NULL) {
-		bzero(&dmsg, sizeof(dmsg));
-		netmsg_init(&dmsg.base, NULL, &curthread->td_msgport,
-				0, ip_fw3_delete_state_dispatch);
-		netisr_domsg(&dmsg.base, 0);
-	}
 	/*
 	 * Press the 'flush' button
 	 */
@@ -962,16 +926,6 @@ ip_fw3_alt_delete_rule(uint16_t rulenum)
 	struct netmsg_del dmsg;
 	struct netmsg_base *nmsg;
 
-	/*
-	 * delete the state which stub is the rule
-	 * which belongs to the CPU and the rulenum
-	 */
-	bzero(&dmsg, sizeof(dmsg));
-	nmsg = &dmsg.base;
-	netmsg_init(nmsg, NULL, &curthread->td_msgport,
-			0, ip_fw3_delete_state_dispatch);
-	dmsg.rulenum = rulenum;
-	netisr_domsg(nmsg, 0);
 
 	/*
 	 * Get rid of the rule duplications on all CPUs

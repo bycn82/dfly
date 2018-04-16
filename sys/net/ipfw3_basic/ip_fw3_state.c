@@ -77,6 +77,31 @@
 
 #include "ip_fw3_state.h"
 
+void
+ip_fw3_append_state_dispatch(netmsg_t nmsg)
+{
+	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
+	struct ipfw_ioc_state *ioc_state = dmsg->ioc_state;
+	(*ipfw_basic_append_state_prt)(ioc_state);
+	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
+}
+
+void
+ip_fw3_delete_state_dispatch(netmsg_t nmsg)
+{
+	struct netmsg_del *dmsg = (struct netmsg_del *)nmsg;
+	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
+	struct ip_fw *rule = ctx->ipfw_rule_chain;
+	while (rule != NULL) {
+		if (rule->rulenum == dmsg->rulenum) {
+			break;
+		}
+		rule = rule->next;
+	}
+
+	(*ipfw_basic_flush_state_prt)(rule);
+	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
+}
 
 int
 ip_fw3_ctl_add_state(struct sockopt *sopt)
