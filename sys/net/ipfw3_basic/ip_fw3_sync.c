@@ -87,6 +87,14 @@ extern struct ipfw3_sync_context	fw3_sync_ctx;
 ipfw_sync_send_state_t			*ipfw_sync_send_state_prt = NULL;
 ipfw_sync_install_state_t		*ipfw_sync_install_state_prt = NULL;
 
+
+
+void
+ipfw_sync_install_state(struct cmd_send_state *cmd)
+{
+	/* TODO */
+}
+
 /*
  * ipfw3sync show config
  */

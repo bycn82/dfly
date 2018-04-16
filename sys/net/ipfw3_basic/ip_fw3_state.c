@@ -72,13 +72,14 @@
 #include <netinet/if_ether.h>
 
 #include <net/ipfw3/ip_fw.h>
+#include <net/ipfw3_basic/ip_fw3_state.h>
 #include <net/ipfw3_basic/ip_fw3_table.h>
 #include <net/ipfw3_basic/ip_fw3_sync.h>
-#include <net/ipfw3_basic/ip_fw3_state.h>
 
 struct ipfw3_state_context 		*fw3_state_ctx[MAXCPU];
 extern struct ipfw3_context		*fw3_ctx[MAXCPU];
 
+extern ipfw_sync_install_state_t 	*ipfw_sync_install_state_prt;
 
 static struct callout 		ip_fw3_state_cleanup_callout;
 static int 			sysctl_var_cleanup_interval = 1;
@@ -126,6 +127,7 @@ SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, udp_timeout, CTLFLAG_RW,
 MALLOC_DEFINE(M_IPFW3_STATE, "M_IPFW3_STATE", "mem for ipfw3 states");
 
 RB_GENERATE(fw3_state_tree, ipfw3_state, entries, ip_fw3_state_cmp);
+
 
 int
 ip_fw3_state_cmp(struct ipfw3_state *s1, struct ipfw3_state *s2)
@@ -305,6 +307,7 @@ void
 ip_fw3_state_fini(void)
 {
 	callout_stop(&ip_fw3_state_cleanup_callout);
+	ipfw_sync_install_state_prt = ipfw_sync_install_state;
 }
 
 void
@@ -316,3 +319,4 @@ ip_fw3_state_init(void)
 			ip_fw3_state_cleanup,
 			NULL);
 }
+

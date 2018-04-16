@@ -36,7 +36,6 @@
 
 #ifdef _KERNEL
 
-
 struct ipfw3_state {
 	RB_ENTRY(ipfw3_state)	entries;
 	uint32_t		src_addr;
@@ -70,6 +69,8 @@ struct ipfw3_state_context {
 	int		count_icmp_out;
 };
 #define LEN_STATE_CTX sizeof(struct ipfw3_state_context)
+
+
 
 
 void	ip_fw3_state_append_dispatch(netmsg_t nmsg);

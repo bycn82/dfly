@@ -88,7 +88,6 @@ extern int 				sysctl_var_fw3_verbose;
 extern ipfw_basic_delete_state_t 	*ipfw_basic_flush_state_prt;
 extern ipfw_basic_append_state_t 	*ipfw_basic_append_state_prt;
 extern ipfw_sync_send_state_t 		*ipfw_sync_send_state_prt;
-extern ipfw_sync_install_state_t 	*ipfw_sync_install_state_prt;
 
 extern int 			sysctl_var_state_max_tcp_in;
 extern int 			sysctl_var_state_max_udp_in;
@@ -101,8 +100,6 @@ extern int 			sysctl_var_state_max_icmp_out;
 extern int 			sysctl_var_icmp_timeout;
 extern int 			sysctl_var_tcp_timeout;
 extern int 			sysctl_var_udp_timeout;
-
-void	ipfw_sync_install_state(struct cmd_send_state *cmd);
 
 
 static struct ip_fw *lookup_next_rule(struct ip_fw *me);
@@ -130,11 +127,6 @@ lookup_next_rule(struct ip_fw *me)
 	return rule;
 }
 
-void
-ipfw_sync_install_state(struct cmd_send_state *cmd)
-{
-	/* TODO */
-}
 
 static int
 iface_match(struct ifnet *ifp, ipfw_insn_if *cmd)
@@ -847,7 +839,6 @@ ip_fw3_basic_init(void)
 
 	ipfw_basic_flush_state_prt = ip_fw3_basic_flush_state;
 	ipfw_basic_append_state_prt = ip_fw3_basic_add_state;
-	ipfw_sync_install_state_prt = ipfw_sync_install_state;
 
 	ip_fw3_register_module(MODULE_BASIC_ID, MODULE_BASIC_NAME);
 	ip_fw3_register_filter_funcs(MODULE_BASIC_ID, O_BASIC_COUNT,

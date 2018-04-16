@@ -110,8 +110,10 @@ struct netmsg_sync {
 	int retval;
 };
 
-
+typedef void ipfw_sync_send_state_t(struct ipfw3_state *, int cpu, int hash);
 typedef void ipfw_sync_install_state_t(struct cmd_send_state *cmd);
+
+void	ipfw_sync_install_state(struct cmd_send_state *cmd);
 
 void sync_centre_conf_dispath(netmsg_t nmsg);
 int ip_fw3_ctl_sync_centre_conf(struct sockopt *sopt);

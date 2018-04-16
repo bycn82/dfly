@@ -104,9 +104,6 @@ struct ipfw_ioc_state {
 #include <net/ipfw3_basic/ip_fw3_state.h>
 
 
-typedef void ipfw_sync_send_state_t(struct ipfw3_state *, int cpu, int hash);
-
-
 /* prototype of the checker functions */
 void	check_count(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
