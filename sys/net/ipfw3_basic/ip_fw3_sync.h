@@ -38,9 +38,9 @@
 
 #define MAX_EDGES 10
 
-#define SYNC_TYPE_SEND_TEST 0  /* testing sync status */
-#define SYNC_TYPE_SEND_STATE 1  /* syncing state */
-#define SYNC_TYPE_SEND_NAT 2  /* syncing nat */
+#define SYNC_TYPE_SEND_TEST	0  /* testing sync status */
+#define SYNC_TYPE_SEND_STATE	1  /* syncing state */
+#define SYNC_TYPE_SEND_NAT	2  /* syncing nat */
 
 
 struct ipfw3_sync_edge {
