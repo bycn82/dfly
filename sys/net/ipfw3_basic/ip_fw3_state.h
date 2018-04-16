@@ -36,6 +36,8 @@
 
 #ifdef _KERNEL
 
+
+
 struct ipfw3_state {
 	RB_ENTRY(ipfw3_state)	entries;
 	uint32_t		src_addr;
@@ -82,7 +84,8 @@ int	ip_fw3_ctl_state_delete(struct sockopt *sopt);
 int	ip_fw3_ctl_state_flush(struct sockopt *sopt);
 int	ip_fw3_ctl_state_get(struct sockopt *sopt);
 int	ip_fw3_ctl_state_sockopt(struct sockopt *sopt);
-
+void	ip_fw3_state_init_dispatch(netmsg_t msg);
+void	ip_fw3_state_fini_dispatch(netmsg_t msg);
 void	ip_fw3_state_fini(void);
 void	ip_fw3_state_init(void);
 #endif	/* _KERNEL */

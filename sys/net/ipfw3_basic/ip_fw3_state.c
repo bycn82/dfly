@@ -76,6 +76,9 @@
 #include <net/ipfw3_basic/ip_fw3_table.h>
 #include <net/ipfw3_basic/ip_fw3_sync.h>
 
+MALLOC_DEFINE(M_IPFW3_STATE, "M_IPFW3_STATE", "mem for ipfw3 states");
+
+
 struct ipfw3_state_context 		*fw3_state_ctx[MAXCPU];
 extern struct ipfw3_context		*fw3_ctx[MAXCPU];
 
@@ -121,10 +124,6 @@ SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, tcp_timeout, CTLFLAG_RW,
 		&sysctl_var_tcp_timeout, 0, "default tcp state life time");
 SYSCTL_INT(_net_inet_ip_fw3_basic, OID_AUTO, udp_timeout, CTLFLAG_RW,
 		&sysctl_var_udp_timeout, 0, "default udp state life time");
-
-
-
-MALLOC_DEFINE(M_IPFW3_STATE, "M_IPFW3_STATE", "mem for ipfw3 states");
 
 RB_GENERATE(fw3_state_tree, ipfw3_state, entries, ip_fw3_state_cmp);
 
@@ -303,9 +302,81 @@ ip_fw3_ctl_state_sockopt(struct sockopt *sopt)
 	}
 	return error;
 }
+
+void
+ip_fw3_state_init_dispatch(netmsg_t msg)
+{
+	struct ipfw3_state_context *tmp;
+
+	tmp = kmalloc(LEN_STATE_CTX, M_IPFW3_STATE, M_WAITOK | M_ZERO);
+	RB_INIT(&tmp->rb_icmp_in);
+	RB_INIT(&tmp->rb_icmp_out);
+	RB_INIT(&tmp->rb_tcp_in);
+	RB_INIT(&tmp->rb_tcp_out);
+	RB_INIT(&tmp->rb_udp_in);
+	RB_INIT(&tmp->rb_udp_out);
+	fw3_state_ctx[mycpuid] = tmp;
+	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
+}
+
+void
+ip_fw3_state_fini_dispatch(netmsg_t msg)
+{
+	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
+	struct ipfw3_state *s, *tmp;
+
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+
+	kfree(fw3_state_ctx[mycpuid], M_IPFW3_STATE);
+	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
+}
+
+
 void
 ip_fw3_state_fini(void)
 {
+	struct netmsg_base msg;
+
+	netmsg_init(&msg, NULL, &curthread->td_msgport,
+		0, ip_fw3_state_fini_dispatch);
+
+	netisr_domsg(&msg, 0);
+
 	callout_stop(&ip_fw3_state_cleanup_callout);
 	ipfw_sync_install_state_prt = ip_fw3_sync_install_state;
 }
@@ -313,10 +384,15 @@ ip_fw3_state_fini(void)
 void
 ip_fw3_state_init(void)
 {
+	struct netmsg_base msg;
+
 	callout_init_mp(&ip_fw3_state_cleanup_callout);
 	callout_reset(&ip_fw3_state_cleanup_callout,
 			sysctl_var_cleanup_interval * hz,
 			ip_fw3_state_cleanup,
 			NULL);
+	netmsg_init(&msg, NULL, &curthread->td_msgport,
+			0, ip_fw3_state_init_dispatch);
+	netisr_domsg(&msg, 0);
 }
 
