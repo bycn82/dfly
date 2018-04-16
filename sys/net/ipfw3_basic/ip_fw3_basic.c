@@ -77,7 +77,7 @@
 
 #include "ip_fw3_basic.h"
 
-MALLOC_DEFINE(M_IPFW3_BASIC, "IPFW3_BASIC", "ipfw3_basic module");
+MALLOC_DEFINE(M_IP_FW3_BASIC, "IPFW3_BASIC", "ipfw3_basic module");
 
 extern struct ipfw3_context		*fw3_ctx[MAXCPU];
 struct ipfw3_state_context 		*fw3_state_ctx[MAXCPU];
@@ -692,7 +692,7 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	}
 	if (*the_count <= the_max) {
 		(*the_count)++;
-		s = kmalloc(LEN_FW3_STATE, M_IPFW3_BASIC,
+		s = kmalloc(LEN_FW3_STATE, M_IP_FW3_BASIC,
 				M_INTWAIT | M_NULLOK | M_ZERO);
 		s->src_addr = k->src_addr;
 		s->dst_addr = k->dst_addr;
@@ -862,7 +862,7 @@ ipfw_basic_init_dispatch(netmsg_t msg)
 {
 	struct ipfw3_state_context *tmp;
 
-	tmp = kmalloc(LEN_STATE_CTX, M_IPFW3_BASIC, M_WAITOK | M_ZERO);
+	tmp = kmalloc(LEN_STATE_CTX, M_IP_FW3_BASIC, M_WAITOK | M_ZERO);
 	RB_INIT(&tmp->rb_icmp_in);
 	RB_INIT(&tmp->rb_icmp_out);
 	RB_INIT(&tmp->rb_tcp_in);
@@ -956,7 +956,47 @@ ip_fw3_basic_init(void)
 static void
 ip_fw3_basic_fini_dispatch(netmsg_t msg)
 {
-	/* TODO */
+	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
+	struct ipfw3_state *s, *tmp;
+
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IP_FW3_BASIC);
+		}
+	}
+
+	kfree(fw3_state_ctx[mycpuid], M_IP_FW3_BASIC);
 	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
 }
 
@@ -966,6 +1006,7 @@ ip_fw3_basic_fini(void)
 	struct netmsg_base msg;
 
 	callout_stop(&ip_fw3_basic_cleanup_callout);
+
 
 	netmsg_init(&msg, NULL, &curthread->td_msgport,
 		0, ip_fw3_basic_fini_dispatch);
