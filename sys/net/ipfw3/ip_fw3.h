@@ -39,6 +39,13 @@
 #ifndef _IP_FW3_H_
 #define _IP_FW3_H_
 
+/*
+ * _IPFW2_H is from ipfw/ip_fw2.h, both cannot be included past this
+ * point but we need both the IPFW2_LOADED and IPFW3_LOADED macros
+ */
+#ifndef _IPFW2_H
+
+
 #include <net/bpf.h>
 
 
@@ -66,13 +73,6 @@
 
 #define NOT_IN_USE      0
 #define IN_USE          1
-
-/*
- * _IPFW2_H is from ipfw/ip_fw2.h, both cannot be included past this
- * point but we need both the IPFW2_LOADED and IPFW3_LOADED macros
- */
-#ifndef _IPFW2_H
-#define _IPFW2_H
 
 #define		RESERVED_SIZE		12
 #define		SIZE_OF_IPFWINSN	8
@@ -421,11 +421,8 @@ typedef struct _ip_fw_x_header {
 
 
 
-
+#endif /* _IPFW2_H */
 #ifdef _KERNEL
-
-
-
 
 #include <net/netisr2.h>
 
@@ -433,22 +430,26 @@ extern int ip_fw3_loaded;
 
 #define	IPFW3_LOADED	(ip_fw3_loaded)
 
-struct sockopt;
-struct dn_flow_set;
+typedef int	ip_fw_ctl_t(struct sockopt *);
+typedef int	ip_fw_chk_t(struct ip_fw_args *);
+typedef struct mbuf *ip_fw_dn_io_t(struct mbuf *, int, int, struct ip_fw_args *);
 
 /*
  * Function definitions.
  */
-int	ip_fw_sockopt(struct sockopt *);
 int     ip_fw3_sockopt(struct sockopt *);
 int	ip_fw3_ctl_x(struct sockopt *sopt);
 
+
+#ifndef _IPFW2_H
+
+int	ip_fw_sockopt(struct sockopt *);
+
+struct sockopt;
+struct dn_flow_set;
+
+
 /* Firewall hooks */
-
-typedef int	ip_fw_chk_t(struct ip_fw_args *);
-typedef int	ip_fw_ctl_t(struct sockopt *);
-typedef struct mbuf *ip_fw_dn_io_t(struct mbuf *, int, int, struct ip_fw_args *);
-
 extern ip_fw_chk_t	*ip_fw_chk_ptr;
 extern ip_fw_ctl_t	*ip_fw_ctl_x_ptr;
 extern ip_fw_dn_io_t	*ip_fw_dn_io_ptr;
@@ -473,7 +474,7 @@ struct ipfw3_context {
 
 
 typedef void (*filter_func)(int *cmd_ctl,int *cmd_val,struct ip_fw_args **args,
-struct ip_fw **f,ipfw_insn *cmd,uint16_t ip_len);
+struct ip_fw **f,ipfw_insn *cmd, uint16_t ip_len);
 void ip_fw3_register_filter_funcs(int module,int opcode,filter_func func);
 void unregister_ipfw_filter_funcs(int module,filter_func func);
 void ip_fw3_register_module(int module_id,char *module_name);
@@ -481,6 +482,12 @@ int ip_fw3_unregister_module(int module_id);
 
 
 #define IPFW_USR_F_NORULE	0x01
+
+struct ipfw3_module{
+	int type;
+	int id;
+	char name[20];
+};
 
 struct ipfw_ioc_flowid {
 	uint16_t	type;	/* ETHERTYPE_ */
@@ -517,13 +524,6 @@ struct ipfw_ioc_flowid {
 
 #define	ICMP_REJECT_RST		0x100	/* fake ICMP code (send a TCP RST) */
 
-struct ipfw3_module{
-	int type;
-	int id;
-	char name[20];
-};
-
-
 #define MATCH_REVERSE	0
 #define MATCH_FORWARD	1
 #define MATCH_NONE	2
@@ -533,5 +533,5 @@ struct ipfw3_module{
 
 
 #endif /* _KERNEL */
-#endif
+#endif /* _IPFW2_H */
 #endif /* _IP_FW3_H_ */

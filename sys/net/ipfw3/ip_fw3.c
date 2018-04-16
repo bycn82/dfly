@@ -82,9 +82,9 @@
 #include <net/netmsg2.h>
 
 #include <net/ipfw3/ip_fw.h>
-#include <net/ipfw3/ip_fw3_log.h>
-#include <net/ipfw3/ip_fw3_table.h>
-#include <net/ipfw3/ip_fw3_sync.h>
+#include <net/ipfw3_basic/ip_fw3_log.h>
+#include <net/ipfw3_basic/ip_fw3_table.h>
+#include <net/ipfw3_basic/ip_fw3_sync.h>
 #include <net/ipfw3_basic/ip_fw3_basic.h>
 #include <net/ipfw3_basic/ip_fw3_state.h>
 #include <net/ipfw3_nat/ip_fw3_nat.h>

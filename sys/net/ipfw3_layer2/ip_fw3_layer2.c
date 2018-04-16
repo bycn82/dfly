@@ -50,7 +50,7 @@
 #include <netinet/ip_var.h>
 
 #include <net/ipfw3/ip_fw.h>
-#include <net/ipfw3/ip_fw3_table.h>
+#include <net/ipfw3_basic/ip_fw3_table.h>
 
 #include "ip_fw3_layer2.h"
 
