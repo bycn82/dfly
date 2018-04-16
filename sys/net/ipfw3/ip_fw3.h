@@ -362,17 +362,16 @@ struct ipfw_ioc_rule {
 
 
 struct ipfw_ioc_state {
-	uint64_t	pcnt;		/* packet match counter		*/
-	uint64_t	bcnt;		/* byte match counter		*/
-	uint16_t 	lifetime;
-	uint32_t	timestamp;	/* alive time			*/
-	uint32_t	expiry;		/* expire time			*/
-
-	uint16_t	rulenum;
-	uint16_t	cpuid;
-	struct ipfw_flow_id 	flow_id;	/* proto +src/dst ip/port */
-	uint8_t		reserved[16];
+	struct in_addr		src_addr;
+	struct in_addr		dst_addr;
+	u_short			src_port;
+	u_short			dst_port;
+	int			cpu_id;
+	int			proto;
+	int			direction;
+	time_t			life;
 };
+#define LEN_IOC_FW3_STATE sizeof(struct ipfw_ioc_state);
 
 /* IP_FW_X header/opcodes */
 typedef struct _ip_fw_x_header {
@@ -404,6 +403,7 @@ typedef struct _ip_fw_x_header {
 #define IP_FW_STATE_ADD		56   /* add one state */
 #define IP_FW_STATE_DEL		57   /* delete states of one rulenum */
 #define IP_FW_STATE_FLUSH	58   /* flush all states */
+#define IP_FW_STATE_GET		59   /* flush all states */
 
 #define IP_FW_TABLE_CREATE	73	/* table_create 	*/
 #define IP_FW_TABLE_DELETE	74	/* table_delete 	*/

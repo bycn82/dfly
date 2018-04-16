@@ -180,5 +180,6 @@ int 	match_state(ipfw_insn *cmd, struct ipfw_flow_id *fid,
 int 	count_match_state(ipfw_insn *cmd, struct ipfw_flow_id *fid,
 		struct ipfw3_state *state, int *count);
 
+void	ip_fw3_basic_flush_state_dispatch(netmsg_t nmsg);
 #endif	/* _KERNEL */
 #endif

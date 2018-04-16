@@ -452,51 +452,7 @@ done:
 static void
 show_states(struct ipfw_ioc_state *d, int pcwidth, int bcwidth)
 {
-	struct protoent *pe;
-	struct in_addr a;
-
-	printf("%05u ", d->rulenum);
-	if (do_acct) {
-		printf("%*ju %*ju ", pcwidth, (uintmax_t)d->pcnt,
-				bcwidth, (uintmax_t)d->bcnt);
-	}
-
-	if (do_time == 1) {
-		/* state->timestamp */
-		char timestr[30];
-		time_t t = _long_to_time(d->timestamp);
-		strcpy(timestr, ctime(&t));
-		*strchr(timestr, '\n') = '\0';
-		printf(" (%s", timestr);
-
-		/* state->lifetime */
-		printf(" %ds", d->lifetime);
-
-		/* state->expiry */
-		if (d->expiry !=0) {
-			t = _long_to_time(d->expiry);
-			strcpy(timestr, ctime(&t));
-			*strchr(timestr, '\n') = '\0';
-			printf(" %s)", timestr);
-		} else {
-			printf(" 0)");
-		}
-
-	} else if (do_time == 2) {
-		printf("(%u %ds %u) ", d->timestamp, d->lifetime, d->expiry);
-	}
-
-	if ((pe = getprotobynumber(d->flow_id.proto)) != NULL)
-		printf(" %s", pe->p_name);
-	else
-		printf(" proto %u", d->flow_id.proto);
-
-	a.s_addr = htonl(d->flow_id.src_ip);
-	printf(" %s %d", inet_ntoa(a), d->flow_id.src_port);
-
-	a.s_addr = htonl(d->flow_id.dst_ip);
-	printf(" <-> %s %d", inet_ntoa(a), d->flow_id.dst_port);
-	printf(" CPU %d", d->cpuid);
+	printf(" CPU %d", d->cpu_id);
 	printf("\n");
 }
 
@@ -507,12 +463,9 @@ list(int ac, char *av[])
 	struct ipfw_ioc_state *dynrules, *d;
 	struct ipfw_ioc_rule *r;
 
-	u_long rnum;
 	void *data = NULL;
 	int bcwidth, n, nbytes, nstat, ndyn, pcwidth, width;
-	int exitval = EX_OK, lac;
-	char **lav, *endptr;
-	int seen = 0;
+	int exitval = EX_OK;
 	int nalloc = 1024;
 
 	NEXT_ARG;
@@ -558,17 +511,7 @@ list(int ac, char *av[])
 				bcwidth = width;
 		}
 	}
-	if (do_dynamic && ndyn) {
-		for (n = 0, d = dynrules; n < ndyn; n++, d++) {
-			width = snprintf(NULL, 0, "%ju", (uintmax_t)d->pcnt);
-			if (width > pcwidth)
-				pcwidth = width;
 
-			width = snprintf(NULL, 0, "%ju", (uintmax_t)d->bcnt);
-			if (width > bcwidth)
-				bcwidth = width;
-		}
-	}
 
 	/* if no rule numbers were specified, list all rules */
 	if (ac == 0) {
@@ -588,52 +531,8 @@ list(int ac, char *av[])
 		goto done;
 	}
 
-	/* display specific rules requested on command line */
 
-	if (do_dynamic != 2) {
-		for (lac = ac, lav = av; lac != 0; lac--) {
-			/* convert command line rule # */
-			rnum = strtoul(*lav++, &endptr, 10);
-			if (*endptr) {
-				exitval = EX_USAGE;
-				warnx("invalid rule number: %s", *(lav - 1));
-				continue;
-			}
-			for (n = seen = 0, r = data; n < nstat;
-				n++, r = (void *)r + IOC_RULESIZE(r) ) {
-				if (r->rulenum > rnum)
-					break;
-				if (r->rulenum == rnum) {
-					show_rules(r, pcwidth, bcwidth);
-					seen = 1;
-				}
-			}
-			if (!seen) {
-				/* give precedence to other error(s) */
-				if (exitval == EX_OK)
-					exitval = EX_UNAVAILABLE;
-				warnx("rule %lu does not exist", rnum);
-			}
-		}
-	}
 
-	if (do_dynamic && ndyn) {
-		if (do_dynamic != 2) {
-			printf("## States (%d):\n", ndyn);
-		}
-		for (lac = ac, lav = av; lac != 0; lac--) {
-			rnum = strtoul(*lav++, &endptr, 10);
-			if (*endptr)
-				/* already warned */
-				continue;
-			for (n = 0, d = dynrules; n < ndyn; n++, d++) {
-				if (d->rulenum > rnum)
-					break;
-				if (d->rulenum == rnum)
-					show_states(d, pcwidth, bcwidth);
-			}
-		}
-	}
 
 	ac = 0;
 

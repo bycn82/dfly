@@ -142,6 +142,7 @@ ipfw_basic_delete_state_t *ipfw_basic_flush_state_prt = NULL;
 ipfw_basic_append_state_t *ipfw_basic_append_state_prt = NULL;
 
 extern int ip_fw_loaded;
+extern struct ipfw3_state_context 	*fw3_state_ctx[MAXCPU];
 int 			sysctl_var_fw3_enable = 1;
 int 			sysctl_var_fw3_one_pass = 1;
 int 			sysctl_var_fw3_verbose = 0;
@@ -1400,6 +1401,46 @@ ip_fw3_ctl_flush_state(struct sockopt *sopt)
 	return 0;
 }
 
+static int
+ip_fw3_ctl_get_state(struct sockopt *sopt)
+{
+	struct ipfw3_state_context *state_ctx;
+	struct ipfw3_state *s;
+
+	size_t sopt_size, total_len = 0;
+	struct ipfw_ioc_state *ioc;
+
+	sopt_size = sopt->sopt_valsize;
+	ioc = (struct ipfw_ioc_state *)sopt->sopt_val;
+	/* icmp states only in CPU 0 */
+	int cpu = 0, n;
+
+	/* udp states */
+	for (cpu = 0; cpu < ncpus; cpu++) {
+		state_ctx = fw3_state_ctx[cpu];
+		for (n = 0; n < NAT_ID_MAX; n++) {
+			RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_udp_out) {
+					total_len += LEN_IOC_FW3_STATE;
+					if (total_len > sopt_size)
+						goto nospace;
+					ioc->src_addr.s_addr = ntohl(s->src_addr);
+					ioc->dst_addr.s_addr = s->dst_addr;
+					ioc->src_port = s->src_port;
+					ioc->dst_port = s->dst_port;
+					ioc->cpu_id = cpu;
+					ioc->proto = IPPROTO_UDP;
+					ioc->life = s->timestamp +
+						sysctl_var_udp_timeout - time_uptime;
+					ioc++;
+			}
+		}
+	}
+
+	sopt->sopt_valsize = total_len;
+	return 0;
+nospace:
+	return 0;
+}
 /*
  * Get the ioc_rule from the sopt
  * call ip_fw3_add_rule to add the rule
@@ -1661,6 +1702,9 @@ ipfw_ctl(struct sockopt *sopt)
 			break;
 		case IP_FW_STATE_FLUSH:
 			error = ip_fw3_ctl_flush_state(sopt);
+			break;
+		case IP_FW_STATE_GET:
+			error = ip_fw3_ctl_get_state(sopt);
 			break;
 		case IP_FW_TABLE_CREATE:
 		case IP_FW_TABLE_DELETE:

@@ -89,52 +89,7 @@ extern int do_acct;
 void
 state_add(int ac, char *av[])
 {
-	struct ipfw_ioc_state ioc_state;
-	ioc_state.expiry = 0;
-	ioc_state.lifetime = 0;
-	NEXT_ARG;
-	if (strcmp(*av, "rulenum") == 0) {
-		NEXT_ARG;
-		ioc_state.rulenum = atoi(*av);
-	} else {
-		errx(EX_USAGE, "ipfw state add rule");
-	}
-	NEXT_ARG;
-	struct protoent *pe;
-	pe = getprotobyname(*av);
-	ioc_state.flow_id.proto = pe->p_proto;
-
-	NEXT_ARG;
-	ioc_state.flow_id.src_ip = inet_addr(*av);
-
-	NEXT_ARG;
-	ioc_state.flow_id.src_port = atoi(*av);
-
-	NEXT_ARG;
-	ioc_state.flow_id.dst_ip = inet_addr(*av);
-
-	NEXT_ARG;
-	ioc_state.flow_id.dst_port = atoi(*av);
-
-	NEXT_ARG;
-	if (strcmp(*av, "live") == 0) {
-		NEXT_ARG;
-		ioc_state.lifetime = atoi(*av);
-		NEXT_ARG;
-	}
-
-	if (strcmp(*av, "expiry") == 0) {
-		NEXT_ARG;
-		ioc_state.expiry = strtoul(*av, NULL, 10);
-		printf("ioc_state.expiry=%d\n", ioc_state.expiry);
-	}
-
-	if (do_set_x(IP_FW_STATE_ADD, &ioc_state, sizeof(struct ipfw_ioc_state)) < 0 ) {
-		err(EX_UNAVAILABLE, "do_set_x(IP_FW_STATE_ADD)");
-	}
-	if (!do_quiet) {
-		printf("Flushed all states.\n");
-	}
+	/* TODO */
 }
 
 void
@@ -177,52 +132,7 @@ state_flush(int ac, char *av[])
 void
 state_show(struct ipfw_ioc_state *d, int pcwidth, int bcwidth)
 {
-	struct protoent *pe;
-	struct in_addr a;
-
-	printf("%05u ", d->rulenum);
-	if (do_acct) {
-		printf("%*ju %*ju ", pcwidth, (uintmax_t)d->pcnt,
-				bcwidth, (uintmax_t)d->bcnt);
-	}
-
-	if (do_time == 1) {
-		/* state->timestamp */
-		char timestr[30];
-		time_t t = _long_to_time(d->timestamp);
-		strcpy(timestr, ctime(&t));
-		*strchr(timestr, '\n') = '\0';
-		printf(" (%s", timestr);
-
-		/* state->lifetime */
-		printf(" %ds", d->lifetime);
-
-		/* state->expiry */
-		if (d->expiry !=0) {
-			t = _long_to_time(d->expiry);
-			strcpy(timestr, ctime(&t));
-			*strchr(timestr, '\n') = '\0';
-			printf(" %s)", timestr);
-		} else {
-			printf(" 0)");
-		}
-
-	} else if (do_time == 2) {
-		printf("(%u %ds %u) ", d->timestamp, d->lifetime, d->expiry);
-	}
-
-	if ((pe = getprotobynumber(d->flow_id.proto)) != NULL)
-		printf(" %s", pe->p_name);
-	else
-		printf(" proto %u", d->flow_id.proto);
-
-	a.s_addr = htonl(d->flow_id.src_ip);
-	printf(" %s %d", inet_ntoa(a), d->flow_id.src_port);
-
-	a.s_addr = htonl(d->flow_id.dst_ip);
-	printf(" <-> %s %d", inet_ntoa(a), d->flow_id.dst_port);
-	printf(" CPU %d", d->cpuid);
-	printf("\n");
+	/* TODO */
 }
 
 void
@@ -233,7 +143,7 @@ state_list(int ac, char *av[])
 
 	u_long rnum;
 	void *data = NULL;
-	int bcwidth, n, nbytes, nstat, ndyn, pcwidth, width;
+	int bcwidth, n, nbytes, nstat, ndyn, pcwidth;
 	int exitval = EX_OK, lac;
 	char **lav, *endptr;
 	int seen = 0;
@@ -268,31 +178,7 @@ state_list(int ac, char *av[])
 
 	/* if showing stats, figure out column widths ahead of time */
 	bcwidth = pcwidth = 0;
-	if (do_acct) {
-		for (n = 0, r = data; n < nstat;
-			n++, r = (void *)r + IOC_RULESIZE(r)) {
-			/* packet counter */
-			width = snprintf(NULL, 0, "%ju", (uintmax_t)r->pcnt);
-			if (width > pcwidth)
-				pcwidth = width;
 
-			/* byte counter */
-			width = snprintf(NULL, 0, "%ju", (uintmax_t)r->bcnt);
-			if (width > bcwidth)
-				bcwidth = width;
-		}
-	}
-	if (do_dynamic && ndyn) {
-		for (n = 0, d = dynrules; n < ndyn; n++, d++) {
-			width = snprintf(NULL, 0, "%ju", (uintmax_t)d->pcnt);
-			if (width > pcwidth)
-				pcwidth = width;
-
-			width = snprintf(NULL, 0, "%ju", (uintmax_t)d->bcnt);
-			if (width > bcwidth)
-				bcwidth = width;
-		}
-	}
 
 	/* if no rule numbers were specified, list all rules */
 	if (ac == 0) {
@@ -327,24 +213,6 @@ state_list(int ac, char *av[])
 				if (exitval == EX_OK)
 					exitval = EX_UNAVAILABLE;
 				warnx("rule %lu does not exist", rnum);
-			}
-		}
-	}
-
-	if (do_dynamic && ndyn) {
-		if (do_dynamic != 2) {
-			printf("## States (%d):\n", ndyn);
-		}
-		for (lac = ac, lav = av; lac != 0; lac--) {
-			rnum = strtoul(*lav++, &endptr, 10);
-			if (*endptr)
-				/* already warned */
-				continue;
-			for (n = 0, d = dynrules; n < ndyn; n++, d++) {
-				if (d->rulenum > rnum)
-					break;
-				if (d->rulenum == rnum)
-					state_show(d, pcwidth, bcwidth);
 			}
 		}
 	}
