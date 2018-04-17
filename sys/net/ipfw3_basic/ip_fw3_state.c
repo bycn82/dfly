@@ -328,7 +328,10 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		s->src_port = k->src_port;
 		s->dst_port = k->dst_port;
 		s->stub = *f;
-		RB_INSERT(fw3_state_tree, the_tree, s);
+		s->timestamp = time_uptime;
+		if (RB_INSERT(fw3_state_tree, the_tree, s)) {
+			kprintf("oops\n");
+		}
 	}
 done:
 	*cmd_ctl = IP_FW_CTL_NO;
