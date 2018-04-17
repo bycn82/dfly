@@ -34,17 +34,19 @@
 #ifndef _IP_FW3_STATE_H
 #define _IP_FW3_STATE_H
 
-
 struct ipfw3_ioc_state {
-	struct in_addr		src_addr;
-	struct in_addr		dst_addr;
-	u_short			src_port;
-	u_short			dst_port;
-	int			cpu_id;
-	int			proto;
-	int			direction;
-	time_t			life;
+	uint64_t	pcnt;		/* packet match counter		*/
+	uint64_t	bcnt;		/* byte match counter		*/
+	uint16_t 	lifetime;
+	uint32_t	timestamp;	/* alive time				*/
+	uint32_t	expiry;		/* expire time				*/
+
+	uint16_t	rulenum;
+	uint16_t	cpuid;
+	struct ipfw_flow_id 	flow_id;	/* proto +src/dst ip/port */
+	uint8_t		reserved[16];
 };
+
 #define LEN_IOC_FW3_STATE sizeof(struct ipfw3_ioc_state);
 
 

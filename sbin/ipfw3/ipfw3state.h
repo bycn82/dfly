@@ -37,5 +37,7 @@
 void	state_add(int ac, char **av);
 void	state_delete(int ac, char **av);
 void	state_flush(int ac, char **av);
+void	state_show(struct ipfw3_ioc_state *d, int pcwidth, int bcwidth);
+void	state_list(int ac, char **av);
 void 	state_main(int ac, char **av);
 #endif

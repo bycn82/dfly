@@ -314,143 +314,6 @@ int show_filter(ipfw_insn *cmd, char *word, int type)
 }
 
 void
-rule_show(struct ipfw_ioc_rule *rule, int pcwidth, int bcwidth)
-{
-	static int twidth = 0;
-	ipfw_insn *cmd;
-	int l;
-
-	u_int32_t set_disable = rule->set_disable;
-
-	if (set_disable & (1 << rule->set)) { /* disabled */
-		if (!show_sets)
-			return;
-		else
-			printf("# DISABLED ");
-	}
-	printf("%05u ", rule->rulenum);
-
-	if (do_acct)
-		printf("%*ju %*ju ", pcwidth, (uintmax_t)rule->pcnt, bcwidth,
-			(uintmax_t)rule->bcnt);
-
-	if (do_time == 1) {
-		char timestr[30];
-
-		if (twidth == 0) {
-			strcpy(timestr, ctime((time_t *)&twidth));
-			*strchr(timestr, '\n') = '\0';
-			twidth = strlen(timestr);
-		}
-		if (rule->timestamp) {
-			time_t t = _long_to_time(rule->timestamp);
-
-			strcpy(timestr, ctime(&t));
-			*strchr(timestr, '\n') = '\0';
-			printf("%s ", timestr);
-		} else {
-			printf("%*s ", twidth, " ");
-		}
-	} else if (do_time == 2) {
-		printf( "%10u ", rule->timestamp);
-	}
-
-	if (show_sets)
-		printf("set %d ", rule->set);
-
-
-	struct ipfw_keyword *k;
-	struct ipfw_mapping *m;
-	shower_func fn, comment_fn = NULL;
-	ipfw_insn *comment_cmd;
-	int i, j, changed;
-
-	/*
-	 * show others and actions
-	 */
-	for (l = rule->cmd_len - rule->act_ofs, cmd = ACTION_PTR(rule);
-		l > 0; l -= F_LEN(cmd),
-		cmd = (ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd))) {
-		k = keywords;
-		m = mappings;
-		for (i = 1; i< KEYWORD_SIZE; i++, k++) {
-			if ( k->module == cmd->module && k->opcode == cmd->opcode ) {
-				for (j = 1; j< MAPPING_SIZE; j++, m++) {
-					if (m->type == IN_USE &&
-						m->module == cmd->module &&
-						m->opcode == cmd->opcode) {
-						if (cmd->module == MODULE_BASIC_ID &&
-							cmd->opcode == O_BASIC_COMMENT) {
-							comment_fn = m->shower;
-							comment_cmd = cmd;
-						} else {
-							fn = m->shower;
-							(*fn)(cmd, 0);
-						}
-						if (cmd->module == MODULE_BASIC_ID &&
-							cmd->opcode ==
-								O_BASIC_CHECK_STATE) {
-							goto done;
-						}
-						break;
-					}
-				}
-				break;
-			}
-		}
-	}
-
-	/*
-	 * show proto
-	 */
-	changed=0;
-	for (l = rule->act_ofs, cmd = rule->cmd; l > 0; l -= F_LEN(cmd),
-			cmd = (ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd))) {
-		changed = show_filter(cmd, "proto", PROTO);
-	}
-	if (!changed && !do_quiet)
-		printf(" ip");
-
-	/*
-	 * show from
-	 */
-	changed = 0;
-	for (l = rule->act_ofs, cmd = rule->cmd; l > 0; l -= F_LEN(cmd),
-			cmd = (ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd))) {
-		changed = show_filter(cmd, "from", FROM);
-	}
-	if (!changed && !do_quiet)
-		printf(" from any");
-
-	/*
-	 * show to
-	 */
-	changed = 0;
-	for (l = rule->act_ofs, cmd = rule->cmd; l > 0; l -= F_LEN(cmd),
-			cmd = (ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd))) {
-		changed = show_filter(cmd, "to", TO);
-	}
-	if (!changed && !do_quiet)
-		printf(" to any");
-
-	/*
-	 * show other filters
-	 */
-	for (l = rule->act_ofs, cmd = rule->cmd, m = mappings;
-			l > 0; l -= F_LEN(cmd),
-			cmd=(ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd))) {
-		show_filter(cmd, "other", FILTER);
-	}
-
-	/* show the comment in the end */
-	if (comment_fn != NULL) {
-		(*comment_fn)(comment_cmd, 0);
-	}
-done:
-	printf("\n");
-}
-
-void
 help(void)
 {
 	fprintf(stderr, "usage: ipfw [options]\n"
@@ -865,8 +728,14 @@ rule_flush(void)
 void
 rule_list(int ac, char *av[])
 {
+	struct ipfw_ioc_rule *r;
+
+	u_long rnum;
 	void *data = NULL;
-	int nbytes;
+	int bcwidth, n, nbytes, nstat, pcwidth;
+	int exitval = EX_OK, lac;
+	char **lav, *endptr;
+	int seen = 0;
 	int nalloc = 1024;
 
 	NEXT_ARG;
@@ -882,6 +751,191 @@ rule_list(int ac, char *av[])
 		if (do_get_x(IP_FW_GET, data, &nbytes) < 0)
 			err(EX_OSERR, "do_get_x(IP_FW_GET)");
 	}
+
+	/*
+	 * Count static rules.
+	 */
+	r = data;
+	nstat = r->static_count;
+
+
+
+
+	/* if no rule numbers were specified, list all rules */
+	if (ac == 0) {
+		if (do_dynamic != 2) {
+			for (n = 0, r = data; n < nstat; n++,
+				r = (void *)r + IOC_RULESIZE(r)) {
+				rule_show(r, pcwidth, bcwidth);
+			}
+		}
+	}
+
+	/* display specific rules requested on command line */
+
+	if (do_dynamic != 2) {
+		for (lac = ac, lav = av; lac != 0; lac--) {
+			/* convert command line rule # */
+			rnum = strtoul(*lav++, &endptr, 10);
+			if (*endptr) {
+				exitval = EX_USAGE;
+				warnx("invalid rule number: %s", *(lav - 1));
+				continue;
+			}
+			for (n = seen = 0, r = data; n < nstat;
+				n++, r = (void *)r + IOC_RULESIZE(r) ) {
+				if (r->rulenum > rnum)
+					break;
+				if (r->rulenum == rnum) {
+					rule_show(r, pcwidth, bcwidth);
+					seen = 1;
+				}
+			}
+			if (!seen) {
+				/* give precedence to other error(s) */
+				if (exitval == EX_OK)
+					exitval = EX_UNAVAILABLE;
+				warnx("rule %lu does not exist", rnum);
+			}
+		}
+	}
+}
+
+void
+rule_show(struct ipfw_ioc_rule *rule, int pcwidth, int bcwidth)
+{
+	static int twidth = 0;
+	ipfw_insn *cmd;
+	int l;
+
+	u_int32_t set_disable = rule->set_disable;
+
+	if (set_disable & (1 << rule->set)) { /* disabled */
+		if (!show_sets)
+			return;
+		else
+			printf("# DISABLED ");
+	}
+	printf("%05u ", rule->rulenum);
+
+	if (do_acct)
+		printf("%*ju %*ju ", pcwidth, (uintmax_t)rule->pcnt, bcwidth,
+			(uintmax_t)rule->bcnt);
+
+	if (do_time == 1) {
+		char timestr[30];
+
+		if (twidth == 0) {
+			strcpy(timestr, ctime((time_t *)&twidth));
+			*strchr(timestr, '\n') = '\0';
+			twidth = strlen(timestr);
+		}
+		if (rule->timestamp) {
+			time_t t = _long_to_time(rule->timestamp);
+
+			strcpy(timestr, ctime(&t));
+			*strchr(timestr, '\n') = '\0';
+			printf("%s ", timestr);
+		} else {
+			printf("%*s ", twidth, " ");
+		}
+	} else if (do_time == 2) {
+		printf( "%10u ", rule->timestamp);
+	}
+
+	if (show_sets)
+		printf("set %d ", rule->set);
+
+
+	struct ipfw_keyword *k;
+	struct ipfw_mapping *m;
+	shower_func fn, comment_fn = NULL;
+	ipfw_insn *comment_cmd;
+	int i, j, changed;
+
+	/*
+	 * show others and actions
+	 */
+	for (l = rule->cmd_len - rule->act_ofs, cmd = ACTION_PTR(rule);
+		l > 0; l -= F_LEN(cmd),
+		cmd = (ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd))) {
+		k = keywords;
+		m = mappings;
+		for (i = 1; i< KEYWORD_SIZE; i++, k++) {
+			if ( k->module == cmd->module && k->opcode == cmd->opcode ) {
+				for (j = 1; j< MAPPING_SIZE; j++, m++) {
+					if (m->type == IN_USE &&
+						m->module == cmd->module &&
+						m->opcode == cmd->opcode) {
+						if (cmd->module == MODULE_BASIC_ID &&
+							cmd->opcode == O_BASIC_COMMENT) {
+							comment_fn = m->shower;
+							comment_cmd = cmd;
+						} else {
+							fn = m->shower;
+							(*fn)(cmd, 0);
+						}
+						if (cmd->module == MODULE_BASIC_ID &&
+							cmd->opcode ==
+								O_BASIC_CHECK_STATE) {
+							goto done;
+						}
+						break;
+					}
+				}
+				break;
+			}
+		}
+	}
+
+	/*
+	 * show proto
+	 */
+	changed=0;
+	for (l = rule->act_ofs, cmd = rule->cmd; l > 0; l -= F_LEN(cmd),
+			cmd = (ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd))) {
+		changed = show_filter(cmd, "proto", PROTO);
+	}
+	if (!changed && !do_quiet)
+		printf(" ip");
+
+	/*
+	 * show from
+	 */
+	changed = 0;
+	for (l = rule->act_ofs, cmd = rule->cmd; l > 0; l -= F_LEN(cmd),
+			cmd = (ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd))) {
+		changed = show_filter(cmd, "from", FROM);
+	}
+	if (!changed && !do_quiet)
+		printf(" from any");
+
+	/*
+	 * show to
+	 */
+	changed = 0;
+	for (l = rule->act_ofs, cmd = rule->cmd; l > 0; l -= F_LEN(cmd),
+			cmd = (ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd))) {
+		changed = show_filter(cmd, "to", TO);
+	}
+	if (!changed && !do_quiet)
+		printf(" to any");
+
+	/*
+	 * show other filters
+	 */
+	for (l = rule->act_ofs, cmd = rule->cmd, m = mappings;
+			l > 0; l -= F_LEN(cmd),
+			cmd=(ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd))) {
+		show_filter(cmd, "other", FILTER);
+	}
+
+	/* show the comment in the end */
+	if (comment_fn != NULL) {
+		(*comment_fn)(comment_cmd, 0);
+	}
+done:
+	printf("\n");
 }
 
 /*
