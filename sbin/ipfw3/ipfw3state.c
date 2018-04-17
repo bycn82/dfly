@@ -139,92 +139,56 @@ state_show(struct ipfw3_ioc_state *d, int pcwidth, int bcwidth)
 void
 state_list(int ac, char *av[])
 {
-	struct ipfw3_ioc_state *dynrules, *d;
-	struct ipfw_ioc_rule *r;
+	int nbytes, nalloc;
+	int rule_id;
+	uint8_t *data;
 
-	u_long rnum;
-	void *data = NULL;
-	int bcwidth, n, nbytes, nstat, ndyn, pcwidth;
-	int exitval = EX_OK, lac;
-	char **lav, *endptr;
-	int seen = 0;
-	int nalloc = 1024;
+	nalloc = 1024;
+	data = NULL;
 
 	NEXT_ARG;
+	if (ac == 0)
+		rule_id = 0;
+	else
+		rule_id = strtoul(*av, NULL, 10);
 
-	/* get rules or pipes from kernel, resizing array as necessary */
 	nbytes = nalloc;
-
 	while (nbytes >= nalloc) {
-		nalloc = nalloc * 2 ;
+		nalloc = nalloc * 2;
 		nbytes = nalloc;
-		if ((data = realloc(data, nbytes)) == NULL)
+		if ((data = realloc(data, nbytes)) == NULL) {
 			err(EX_OSERR, "realloc");
-		if (do_get_x(IP_FW_GET, data, &nbytes) < 0)
-			err(EX_OSERR, "do_get_x(IP_FW_GET)");
-	}
-
-	/*
-	 * Count static rules.
-	 */
-	r = data;
-	nstat = r->static_count;
-
-	/*
-	 * Count dynamic rules. This is easier as they have
-	 * fixed size.
-	 */
-	dynrules = (struct ipfw3_ioc_state *)((void *)r + r->static_len);
-	ndyn = (nbytes - r->static_len) / sizeof(*dynrules);
-
-	/* if showing stats, figure out column widths ahead of time */
-	bcwidth = pcwidth = 0;
-
-
-	/* if no rule numbers were specified, list all rules */
-	if (ac == 0) {
-		if (do_dynamic && ndyn) {
-			if (do_dynamic != 2) {
-				printf("## States (%d):\n", ndyn);
-			}
-			for (n = 0, d = dynrules; n < ndyn; n++, d++)
-				state_show(d, pcwidth, bcwidth);
 		}
-		goto done;
-	}
-
-	/* display specific rules requested on command line */
-
-	if (do_dynamic != 2) {
-		for (lac = ac, lav = av; lac != 0; lac--) {
-			/* convert command line rule # */
-			rnum = strtoul(*lav++, &endptr, 10);
-			if (*endptr) {
-				exitval = EX_USAGE;
-				warnx("invalid rule number: %s", *(lav - 1));
-				continue;
-			}
-			for (n = seen = 0, r = data; n < nstat;
-				n++, r = (void *)r + IOC_RULESIZE(r) ) {
-				if (r->rulenum > rnum)
-					break;
-			}
-			if (!seen) {
-				/* give precedence to other error(s) */
-				if (exitval == EX_OK)
-					exitval = EX_UNAVAILABLE;
-				warnx("rule %lu does not exist", rnum);
-			}
+		memcpy(data, &rule_id, sizeof(int));
+		if (do_get_x(IP_FW_STATE_GET, data, &nbytes) < 0) {
+			err(EX_OSERR, "do_get_x(IP_FW_NAT_GET_RECORD)");
 		}
 	}
+	if (nbytes == 0)
+		exit(EX_OK);
 
-	ac = 0;
-
-done:
-	free(data);
-
-	if (exitval != EX_OK)
-		exit(exitval);
+	struct ipfw3_ioc_state *ioc;
+	ioc =(struct ipfw3_ioc_state *)data;
+	int count = nbytes / LEN_IOC_NAT_STATE;
+	int i;
+	for (i = 0; i < count; i ++) {
+		printf("%d %d", ioc->rule_id, ioc->cpu_id);
+		if (ioc->proto == IPPROTO_ICMP) {
+			printf(" icmp");
+		} else if (ioc->proto == IPPROTO_TCP) {
+			printf(" tcp");
+		} else if (ioc->proto == IPPROTO_UDP) {
+			printf(" udp");
+		}
+		printf(" %s:%hu",inet_ntoa(ioc->src_addr),
+			htons(ioc->src_port));
+		printf(" %s:%hu",inet_ntoa(ioc->dst_addr),
+			htons(ioc->dst_port));
+		printf(" %c", ioc->direction? 'o' : 'i');
+		printf(" %lld", (long long)ioc->life);
+		printf("\n");
+		ioc++;
+	}
 }
 
 void

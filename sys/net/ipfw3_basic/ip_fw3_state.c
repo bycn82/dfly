@@ -192,10 +192,10 @@ ip_fw3_ctl_state_get(struct sockopt *sopt)
 	struct ipfw3_state *s;
 
 	size_t sopt_size, total_len = 0;
-	struct ipfw_ioc_state *ioc;
+	struct ipfw3_ioc_state *ioc;
 
 	sopt_size = sopt->sopt_valsize;
-	ioc = (struct ipfw_ioc_state *)sopt->sopt_val;
+	ioc = (struct ipfw3_ioc_state *)sopt->sopt_val;
 	/* icmp states only in CPU 0 */
 	int cpu = 0;
 

@@ -148,10 +148,10 @@ int 	count_match_state(ipfw_insn *cmd, struct ipfw_flow_id *fid,
 
 
 typedef void ipfw_basic_delete_state_t(struct ip_fw *);
-typedef void ipfw_basic_append_state_t(struct ipfw_ioc_state *);
+typedef void ipfw_basic_append_state_t(struct ipfw3_ioc_state *);
 
 
-void	ip_fw3_basic_add_state(struct ipfw_ioc_state *ioc_state);
+void	ip_fw3_basic_add_state(struct ipfw3_ioc_state *ioc_state);
 void	ip_fw3_basic_flush_state_dispatch(netmsg_t nmsg);
 void	ip_fw3_basic_flush_state(struct ip_fw *rule);
 

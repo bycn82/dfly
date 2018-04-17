@@ -758,7 +758,7 @@ check_dst_n_port(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 
 
 void
-ip_fw3_basic_add_state(struct ipfw_ioc_state *ioc_state)
+ip_fw3_basic_add_state(struct ipfw3_ioc_state *ioc_state)
 {
 	/* TODO */
 }
