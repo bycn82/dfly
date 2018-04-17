@@ -88,6 +88,8 @@ struct ipfw3_state_context {
 #define LEN_STATE_CTX sizeof(struct ipfw3_state_context)
 
 
+void	state_insert(int *the_count, struct fw3_state_tree *the_tree,
+			struct ipfw3_state *k, struct ip_fw *f);
 void	ip_fw3_state_cleanup_dispatch(netmsg_t nmsg);
 void	ip_fw3_state_cleanup(void *dummy __unused);
 void	ip_fw3_state_append_dispatch(netmsg_t nmsg);

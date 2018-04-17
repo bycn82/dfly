@@ -73,6 +73,8 @@
 
 #include "ip_fw3_nat.h"
 
+MALLOC_DEFINE(M_IPFW3_NAT, "IP_FW3_NAT", "IP_FW3 NAT module");
+
 /*
  * Lockless Kernel NAT
  *
@@ -251,7 +253,7 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 			switch  (ip->ip_p) {
 			case IPPROTO_TCP:
 				m->m_pkthdr.csum_flags = CSUM_TCP;
-				s = kmalloc(LEN_NAT_STATE, M_IP_FW3_NAT,
+				s = kmalloc(LEN_NAT_STATE, M_IPFW3_NAT,
 						M_INTWAIT | M_NULLOK | M_ZERO);
 
 				s->src_addr = args->f_id.src_ip;
@@ -267,7 +269,7 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 				break;
 			case IPPROTO_UDP:
 				m->m_pkthdr.csum_flags = CSUM_UDP;
-				s = kmalloc(LEN_NAT_STATE, M_IP_FW3_NAT,
+				s = kmalloc(LEN_NAT_STATE, M_IPFW3_NAT,
 						M_INTWAIT | M_NULLOK | M_ZERO);
 
 				s->src_addr = args->f_id.src_ip;
@@ -282,7 +284,7 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 				need_return_state = TRUE;
 				break;
 			case IPPROTO_ICMP:
-				s = kmalloc(LEN_NAT_STATE, M_IP_FW3_NAT,
+				s = kmalloc(LEN_NAT_STATE, M_IPFW3_NAT,
 						M_INTWAIT | M_NULLOK | M_ZERO);
 				s->src_addr = args->f_id.src_ip;
 				s->dst_addr = args->f_id.dst_ip;
@@ -294,7 +296,7 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 				s->alias_port = htons(s->src_addr % ALIAS_RANGE);
 				dup = RB_INSERT(state_tree, tree_out, s);
 
-				s2 = kmalloc(LEN_NAT_STATE, M_IP_FW3_NAT,
+				s2 = kmalloc(LEN_NAT_STATE, M_IPFW3_NAT,
 						M_INTWAIT | M_NULLOK | M_ZERO);
 
 				s2->src_addr = args->f_id.dst_ip;
@@ -364,7 +366,7 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 					M_LWKTMSG, M_NOWAIT | M_ZERO);
 			netmsg_init(&msg->base, NULL, &curthread->td_msgport,
 					0, nat_state_add_dispatch);
-			s2 = kmalloc(LEN_NAT_STATE, M_IP_FW3_NAT,
+			s2 = kmalloc(LEN_NAT_STATE, M_IPFW3_NAT,
 					M_INTWAIT | M_NULLOK | M_ZERO);
 
 			s2->src_addr = args->f_id.dst_ip;
@@ -383,7 +385,7 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 			msg->proto = ip->ip_p;
 			netisr_sendmsg(&msg->base, nextcpu);
 		} else {
-			s2 = kmalloc(LEN_NAT_STATE, M_IP_FW3_NAT,
+			s2 = kmalloc(LEN_NAT_STATE, M_IPFW3_NAT,
 					M_INTWAIT | M_NULLOK | M_ZERO);
 
 			s2->src_addr = args->f_id.dst_ip;
@@ -689,7 +691,7 @@ nat_add_dispatch(netmsg_t nat_add_msg)
 
 	if (nat_ctx->nats[ioc->id - 1] == NULL) {
 		/* op = set, and nat not exists */
-		nat = kmalloc(LEN_CFG_NAT, M_IP_FW3_NAT, M_WAITOK | M_ZERO);
+		nat = kmalloc(LEN_CFG_NAT, M_IPFW3_NAT, M_WAITOK | M_ZERO);
 		LIST_INIT(&nat->alias);
 		RB_INIT(&nat->rb_tcp_in);
 		RB_INIT(&nat->rb_tcp_out);
@@ -704,7 +706,7 @@ nat_add_dispatch(netmsg_t nat_add_msg)
 		ip = &ioc->ip;
 		for (n = 0; n < ioc->count; n++) {
 			alias = kmalloc(LEN_CFG_ALIAS,
-					M_IP_FW3_NAT, M_WAITOK | M_ZERO);
+					M_IPFW3_NAT, M_WAITOK | M_ZERO);
 			memcpy(&alias->ip, ip, LEN_IN_ADDR);
 			LIST_INSERT_HEAD((&nat->alias), alias, next);
 			ip++;
@@ -748,43 +750,43 @@ nat_del_dispatch(netmsg_t nat_del_msg)
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_icmp_in, tmp) {
 			RB_REMOVE(state_tree, &nat->rb_icmp_in, s);
 			if (s != NULL) {
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_icmp_out, tmp) {
 			RB_REMOVE(state_tree, &nat->rb_icmp_out, s);
 			if (s != NULL) {
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_tcp_in, tmp) {
 			RB_REMOVE(state_tree, &nat->rb_tcp_in, s);
 			if (s != NULL) {
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_tcp_out, tmp) {
 			RB_REMOVE(state_tree, &nat->rb_tcp_out, s);
 			if (s != NULL) {
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_udp_in, tmp) {
 			RB_REMOVE(state_tree, &nat->rb_udp_in, s);
 			if (s != NULL) {
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_udp_out, tmp) {
 			RB_REMOVE(state_tree, &nat->rb_icmp_in, s);
 			if (s != NULL) {
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 		LIST_FOREACH_MUTABLE(alias, &nat->alias, next, tmp2) {
-			kfree(alias, M_IP_FW3_NAT);
+			kfree(alias, M_IPFW3_NAT);
 		}
-		kfree(nat, M_IP_FW3_NAT);
+		kfree(nat, M_IPFW3_NAT);
 		nat_ctx->nats[msg->id - 1] = NULL;
 	}
 	netisr_forwardmsg_all(&nat_del_msg->base, mycpuid + 1);
@@ -850,7 +852,7 @@ nat_init_ctx_dispatch(netmsg_t msg)
 {
 	struct ip_fw3_nat_context *tmp;
 	tmp = kmalloc(sizeof(struct ip_fw3_nat_context),
-				M_IP_FW3_NAT, M_WAITOK | M_ZERO);
+				M_IPFW3_NAT, M_WAITOK | M_ZERO);
 
 	ip_fw3_nat_ctx[mycpuid] = tmp;
 	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
@@ -859,7 +861,7 @@ nat_init_ctx_dispatch(netmsg_t msg)
 void
 nat_fnit_ctx_dispatch(netmsg_t msg)
 {
-	kfree(ip_fw3_nat_ctx[mycpuid], M_IP_FW3_NAT);
+	kfree(ip_fw3_nat_ctx[mycpuid], M_IPFW3_NAT);
 	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
 }
 
@@ -881,37 +883,37 @@ ip_fw3_nat_cleanup_func_dispatch(netmsg_t nmsg)
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_icmp_in, tmp) {
 			if (time_uptime - s->timestamp > sysctl_var_icmp_timeout) {
 				RB_REMOVE(state_tree, &nat->rb_icmp_in, s);
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_icmp_out, tmp) {
 			if (time_uptime - s->timestamp > sysctl_var_icmp_timeout) {
 				RB_REMOVE(state_tree, &nat->rb_icmp_out, s);
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_tcp_in, tmp) {
 			if (time_uptime - s->timestamp > sysctl_var_tcp_timeout) {
 				RB_REMOVE(state_tree, &nat->rb_tcp_in, s);
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_tcp_out, tmp) {
 			if (time_uptime - s->timestamp > sysctl_var_tcp_timeout) {
 				RB_REMOVE(state_tree, &nat->rb_tcp_out, s);
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_udp_in, tmp) {
 			if (time_uptime - s->timestamp > sysctl_var_udp_timeout) {
 				RB_REMOVE(state_tree, &nat->rb_udp_in, s);
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_udp_out, tmp) {
 			if (time_uptime - s->timestamp > sysctl_var_udp_timeout) {
 				RB_REMOVE(state_tree, &nat->rb_udp_out, s);
-				kfree(s, M_IP_FW3_NAT);
+				kfree(s, M_IPFW3_NAT);
 			}
 		}
 	}

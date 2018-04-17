@@ -78,7 +78,7 @@
 #include <net/ipfw3_basic/ip_fw3_basic.h>
 #include <net/ipfw3_basic/ip_fw3_state.h>
 
-MALLOC_DEFINE(M_IP_FW3_BASIC, "IPFW3_BASIC", "ipfw3_basic module");
+MALLOC_DEFINE(M_IPFW3_BASIC, "IPFW3_BASIC", "ipfw3_basic module");
 
 
 extern struct ipfw3_context		*fw3_ctx[MAXCPU];
@@ -630,15 +630,7 @@ check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		}
 	}
 	if (*the_count <= the_max) {
-		(*the_count)++;
-		s = kmalloc(LEN_FW3_STATE, M_IP_FW3_BASIC,
-				M_INTWAIT | M_NULLOK | M_ZERO);
-		s->src_addr = k->src_addr;
-		s->dst_addr = k->dst_addr;
-		s->src_port = k->src_port;
-		s->dst_port = k->dst_port;
-		s->stub = *f;
-		RB_INSERT(fw3_state_tree, the_tree, s);
+		state_insert(the_count, the_tree, k, *f);
 	}
 done:
 	*cmd_ctl = IP_FW_CTL_NO;
@@ -772,37 +764,37 @@ ip_fw3_basic_flush_state_dispatch(netmsg_t nmsg)
 	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_in, tmp) {
 		RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_in, s);
 		if (s != NULL) {
-			kfree(s, M_IP_FW3_BASIC);
+			kfree(s, M_IPFW3_BASIC);
 		}
 	}
 	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_out, tmp) {
 		RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_out, s);
 		if (s != NULL) {
-			kfree(s, M_IP_FW3_BASIC);
+			kfree(s, M_IPFW3_BASIC);
 		}
 	}
 	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_in, tmp) {
 		RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_in, s);
 		if (s != NULL) {
-			kfree(s, M_IP_FW3_BASIC);
+			kfree(s, M_IPFW3_BASIC);
 		}
 	}
 	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_out, tmp) {
 		RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_out, s);
 		if (s != NULL) {
-			kfree(s, M_IP_FW3_BASIC);
+			kfree(s, M_IPFW3_BASIC);
 		}
 	}
 	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_in, tmp) {
 		RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_in, s);
 		if (s != NULL) {
-			kfree(s, M_IP_FW3_BASIC);
+			kfree(s, M_IPFW3_BASIC);
 		}
 	}
 	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_out, tmp) {
 		RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_out, s);
 		if (s != NULL) {
-			kfree(s, M_IP_FW3_BASIC);
+			kfree(s, M_IPFW3_BASIC);
 		}
 	}
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);

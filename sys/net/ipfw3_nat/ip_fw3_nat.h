@@ -122,9 +122,6 @@ struct cfg_alias {
 };
 #define LEN_CFG_ALIAS sizeof(struct cfg_alias)
 
-
-MALLOC_DEFINE(M_IP_FW3_NAT, "IP_FW3_NAT", "IP_FW3 NAT module");
-
 /* place to hold the nat conf */
 struct ip_fw3_nat_context {
 	struct cfg_nat 		*nats[NAT_ID_MAX];

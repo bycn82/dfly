@@ -155,6 +155,21 @@ ip_fw3_state_cmp(struct ipfw3_state *s1, struct ipfw3_state *s2)
 }
 
 void
+state_insert(int *the_count, struct fw3_state_tree *the_tree,
+		struct ipfw3_state *k, struct ip_fw *f)
+{
+
+	(*the_count)++;
+	struct ipfw3_state *s = kmalloc(LEN_FW3_STATE, M_IPFW3_STATE,
+						M_INTWAIT | M_NULLOK | M_ZERO);
+	s->src_addr = k->src_addr;
+	s->dst_addr = k->dst_addr;
+	s->src_port = k->src_port;
+	s->dst_port = k->dst_port;
+	s->stub = f;
+	RB_INSERT(fw3_state_tree, the_tree, s);
+}
+void
 ip_fw3_state_append_dispatch(netmsg_t nmsg)
 {
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
