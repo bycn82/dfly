@@ -817,6 +817,7 @@ ip_fw3_ctl_nat_flush(struct sockopt *sopt)
 	}
 	return 0;
 }
+
 int
 ip_fw3_ctl_nat_sockopt(struct sockopt *sopt)
 {

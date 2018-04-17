@@ -433,6 +433,7 @@ extern int ip_fw3_loaded;
 typedef int	ip_fw_ctl_t(struct sockopt *);
 typedef int	ip_fw_chk_t(struct ip_fw_args *);
 typedef struct mbuf *ip_fw_dn_io_t(struct mbuf *, int, int, struct ip_fw_args *);
+typedef void *ipfw_log_t(struct mbuf *m, struct ether_header *eh, uint16_t id);
 
 /*
  * Function definitions.

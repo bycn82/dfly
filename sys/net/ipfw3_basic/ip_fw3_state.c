@@ -81,7 +81,7 @@ MALLOC_DEFINE(M_IPFW3_STATE, "M_IPFW3_STATE", "mem for ipfw3 states");
 
 struct ipfw3_state_context 		*fw3_state_ctx[MAXCPU];
 extern struct ipfw3_context		*fw3_ctx[MAXCPU];
-
+extern ip_fw_ctl_t 			*ipfw_ctl_state_ptr;
 extern ipfw_sync_install_state_t 	*ipfw_sync_install_state_prt;
 
 static struct callout 		ip_fw3_state_cleanup_callout;
@@ -227,6 +227,7 @@ nospace:
 void
 ip_fw3_state_cleanup_dispatch(netmsg_t nmsg)
 {
+	/*
 	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
 	struct ipfw3_state *s, *tmp;
 
@@ -266,6 +267,7 @@ ip_fw3_state_cleanup_dispatch(netmsg_t nmsg)
 			kfree(s, M_IPFW3_STATE);
 		}
 	}
+	*/
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 
@@ -322,6 +324,7 @@ ip_fw3_state_init_dispatch(netmsg_t msg)
 void
 ip_fw3_state_fini_dispatch(netmsg_t msg)
 {
+	/*
 	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
 	struct ipfw3_state *s, *tmp;
 
@@ -361,8 +364,9 @@ ip_fw3_state_fini_dispatch(netmsg_t msg)
 			kfree(s, M_IPFW3_STATE);
 		}
 	}
-
+	*/
 	kfree(fw3_state_ctx[mycpuid], M_IPFW3_STATE);
+	fw3_state_ctx[mycpuid] = NULL;
 	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
 }
 
@@ -376,9 +380,7 @@ ip_fw3_state_fini(void)
 		0, ip_fw3_state_fini_dispatch);
 
 	netisr_domsg(&msg, 0);
-
 	callout_stop(&ip_fw3_state_cleanup_callout);
-	ipfw_sync_install_state_prt = ip_fw3_sync_install_state;
 }
 
 void
@@ -386,6 +388,7 @@ ip_fw3_state_init(void)
 {
 	struct netmsg_base msg;
 
+	ipfw_ctl_state_ptr = ip_fw3_ctl_state_sockopt;
 	callout_init_mp(&ip_fw3_state_cleanup_callout);
 	callout_reset(&ip_fw3_state_cleanup_callout,
 			sysctl_var_cleanup_interval * hz,

@@ -138,6 +138,10 @@ struct netmsg_zent {
 };
 
 ip_fw_ctl_t *ipfw_ctl_nat_ptr = NULL;
+ip_fw_ctl_t *ipfw_ctl_state_ptr = NULL;
+ip_fw_ctl_t *ipfw_ctl_table_ptr = NULL;
+ip_fw_ctl_t *ipfw_ctl_sync_ptr = NULL;
+ipfw_log_t *ipfw_log_ptr = NULL;
 
 /* handlers which implemented in ipfw_basic module */
 ipfw_basic_delete_state_t *ipfw_basic_flush_state_prt = NULL;
@@ -272,8 +276,8 @@ check_accept(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 {
 	*cmd_val = IP_FW_PASS;
 	*cmd_ctl = IP_FW_CTL_DONE;
-	if (cmd->arg3) {
-		ipfw_log((*args)->m, (*args)->eh, cmd->arg1);
+	if (cmd->arg3 && ipfw_log_ptr != NULL) {
+		ipfw_log_ptr((*args)->m, (*args)->eh, cmd->arg1);
 	}
 }
 
@@ -283,8 +287,8 @@ check_deny(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 {
 	*cmd_val = IP_FW_DENY;
 	*cmd_ctl = IP_FW_CTL_DONE;
-	if (cmd->arg3) {
-		ipfw_log((*args)->m, (*args)->eh, cmd->arg1);
+	if (cmd->arg3 && ipfw_log_ptr != NULL) {
+		ipfw_log_ptr((*args)->m, (*args)->eh, cmd->arg1);
 	}
 }
 
@@ -1542,7 +1546,9 @@ ipfw_ctl(struct sockopt *sopt)
 		case IP_FW_STATE_DEL:
 		case IP_FW_STATE_FLUSH:
 		case IP_FW_STATE_GET:
-			error = ip_fw3_ctl_state_sockopt(sopt);
+			if (ipfw_ctl_state_ptr != NULL) {
+				error = ipfw_ctl_state_ptr(sopt);
+			}
 			break;
 		case IP_FW_TABLE_CREATE:
 		case IP_FW_TABLE_DELETE:
@@ -1553,7 +1559,9 @@ ipfw_ctl(struct sockopt *sopt)
 		case IP_FW_TABLE_SHOW:
 		case IP_FW_TABLE_TEST:
 		case IP_FW_TABLE_RENAME:
-			error = ip_fw3_ctl_table_sockopt(sopt);
+			if (ipfw_ctl_table_ptr != NULL) {
+				error = ipfw_ctl_table_ptr(sopt);
+			}
 			break;
 		case IP_FW_SYNC_SHOW_CONF:
 		case IP_FW_SYNC_SHOW_STATUS:
@@ -1567,7 +1575,9 @@ ipfw_ctl(struct sockopt *sopt)
 		case IP_FW_SYNC_CENTRE_STOP:
 		case IP_FW_SYNC_CENTRE_TEST:
 		case IP_FW_SYNC_CENTRE_CLEAR:
-			error = ip_fw3_ctl_sync_sockopt(sopt);
+			if (ipfw_ctl_sync_ptr != NULL) {
+				error = ipfw_ctl_sync_ptr(sopt);
+			}
 			break;
 		default:
 			kprintf("ipfw_ctl invalid option %d\n",
@@ -1889,15 +1899,9 @@ ip_fw3_init(void)
 	struct netmsg_base smsg;
 	int error;
 
-	ip_fw3_log_modevent(MOD_LOAD);
-	ip_fw3_sync_modevent(MOD_LOAD);
-
 	init_module();
 	netmsg_init(&smsg, NULL, &curthread->td_msgport,
 			0, ip_fw3_init_dispatch);
-	error = lwkt_domsg(IPFW_CFGPORT, &smsg.lmsg, 0);
-	netmsg_init(&smsg, NULL, &curthread->td_msgport,
-			0, table_init_dispatch);
 	error = lwkt_domsg(IPFW_CFGPORT, &smsg.lmsg, 0);
 	return error;
 }
@@ -1917,7 +1921,7 @@ ip_fw3_fini_dispatch(netmsg_t nmsg)
 	ip_fw_ctl_x_ptr = NULL;
 	ip_fw_dn_io_ptr = NULL;
 	ip_fw3_ctl_flush_rule(1 /* kill default rule */);
-	table_fini();
+//	table_fini();
 	/* Free pre-cpu context */
 	for (cpu = 0; cpu < ncpus; ++cpu) {
 		if (fw3_ctx[cpu] != NULL) {
@@ -1934,9 +1938,6 @@ static int
 ip_fw3_fini(void)
 {
 	struct netmsg_base smsg;
-
-	ip_fw3_log_modevent(MOD_UNLOAD);
-	ip_fw3_sync_modevent(MOD_UNLOAD);
 
 	netmsg_init(&smsg, NULL, &curthread->td_msgport,
 			0, ip_fw3_fini_dispatch);

@@ -84,6 +84,7 @@ MALLOC_DEFINE(M_IP_FW3_BASIC, "IPFW3_BASIC", "ipfw3_basic module");
 extern struct ipfw3_context		*fw3_ctx[MAXCPU];
 extern struct ipfw3_sync_context 	fw3_sync_ctx;
 extern struct ipfw3_state_context 	*fw3_state_ctx[MAXCPU];
+extern ip_fw_ctl_t 			*ipfw_ctl_basic_ptr;
 
 extern int 				sysctl_var_fw3_verbose;
 extern ipfw_basic_delete_state_t 	*ipfw_basic_flush_state_prt;
@@ -819,8 +820,6 @@ ip_fw3_basic_flush_state(struct ip_fw *rule)
 int
 ip_fw3_basic_init(void)
 {
-
-
 	ipfw_basic_flush_state_prt = ip_fw3_basic_flush_state;
 	ipfw_basic_append_state_prt = ip_fw3_basic_add_state;
 
@@ -883,7 +882,7 @@ ip_fw3_basic_init(void)
 			O_BASIC_IP_DST_N_PORT, (filter_func)check_dst_n_port);
 
 
-
+	ip_fw3_state_init();
 	return 0;
 }
 
@@ -891,12 +890,9 @@ ip_fw3_basic_init(void)
 int
 ip_fw3_basic_fini(void)
 {
-
 	ip_fw3_state_fini();
-
 	return ip_fw3_unregister_module(MODULE_BASIC_ID);
 }
-
 
 static int
 ipfw3_basic_modevent(module_t mod, int type, void *data)
