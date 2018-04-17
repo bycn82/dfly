@@ -438,10 +438,8 @@ ip_fw3_ctl_state_get(struct sockopt *sopt)
 
 	/* icmp states */
 	for (cpu = 0; cpu < ncpus; cpu++) {
-kprintf("cpu #%d \n", cpu);
 		state_ctx = fw3_state_ctx[cpu];
 		RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_icmp_in) {
-kprintf("icmp in \n");
 				total_len += LEN_IOC_FW3_STATE;
 				if (total_len > sopt_size)
 					goto nospace;
@@ -456,7 +454,6 @@ kprintf("icmp in \n");
 				ioc++;
 		}
 		RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_icmp_out) {
-kprintf("icmp out \n");
 				total_len += LEN_IOC_FW3_STATE;
 				if (total_len > sopt_size)
 					goto nospace;
