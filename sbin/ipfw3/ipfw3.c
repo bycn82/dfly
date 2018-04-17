@@ -133,26 +133,26 @@ match_token(struct char_int_map *table, char *string)
 }
 
 void
-get_modules(char *modules_str, int len)
+module_get(char *modules_str, int len)
 {
 	if (do_get_x(IP_FW_MODULE, modules_str, &len) < 0)
 		errx(EX_USAGE, "ipfw3 not loaded.");
 }
 
 void
-list_modules(int ac, char *av[])
+module_list(int ac, char *av[])
 {
 	void *module_str = NULL;
 	int len = 1024;
 	if ((module_str = realloc(module_str, len)) == NULL)
 		err(EX_OSERR, "realloc");
 
-	get_modules(module_str, len);
+	module_get(module_str, len);
 	printf("%s\n", (char *)module_str);
 }
 
 void
-load_modules(void)
+module_load(void)
 {
 	const char *error;
 	init_module mod_init_func;
@@ -164,7 +164,7 @@ load_modules(void)
 	if ((module_str = realloc(module_str, len)) == NULL)
 		err(EX_OSERR, "realloc");
 
-	get_modules(module_str, len);
+	module_get(module_str, len);
 
 	const char s[2] = ",";
 	char *token;
@@ -314,7 +314,7 @@ int show_filter(ipfw_insn *cmd, char *word, int type)
 }
 
 void
-show_rules(struct ipfw_ioc_rule *rule, int pcwidth, int bcwidth)
+rule_show(struct ipfw_ioc_rule *rule, int pcwidth, int bcwidth)
 {
 	static int twidth = 0;
 	ipfw_insn *cmd;
@@ -451,29 +451,6 @@ done:
 }
 
 void
-list(int ac, char *av[])
-{
-	void *data = NULL;
-	int nbytes;
-	int nalloc = 1024;
-
-	NEXT_ARG;
-
-	/* get rules or pipes from kernel, resizing array as necessary */
-	nbytes = nalloc;
-
-	while (nbytes >= nalloc) {
-		nalloc = nalloc * 2 ;
-		nbytes = nalloc;
-		if ((data = realloc(data, nbytes)) == NULL)
-			err(EX_OSERR, "realloc");
-		if (do_get_x(IP_FW_GET, data, &nbytes) < 0)
-			err(EX_OSERR, "do_get_x(IP_FW_GET)");
-	}
-}
-
-
-void
 help(void)
 {
 	fprintf(stderr, "usage: ipfw [options]\n"
@@ -565,7 +542,7 @@ next_cmd(ipfw_insn *cmd)
  *
  */
 void
-add(int ac, char *av[])
+rule_add(int ac, char *av[])
 {
 	/*
 	 * rules are added into the 'rulebuf' and then copied in
@@ -815,11 +792,11 @@ done:
 		err(EX_UNAVAILABLE, "getsockopt(%s)", "IP_FW_ADD");
 	}
 	if (!do_quiet)
-		show_rules(rule, 10, 10);
+		rule_show(rule, 10, 10);
 }
 
 void
-zero(int ac, char *av[])
+rule_zero(int ac, char *av[])
 {
 	int rulenum;
 	int failed = EX_OK;
@@ -854,7 +831,7 @@ zero(int ac, char *av[])
 }
 
 void
-flush(void)
+rule_flush(void)
 {
 	int cmd = IP_FW_FLUSH;
 	if (do_pipe) {
@@ -882,6 +859,28 @@ flush(void)
 	}
 	if (!do_quiet) {
 		printf("Flushed all %s.\n", do_pipe ? "pipes" : "rules");
+	}
+}
+
+void
+rule_list(int ac, char *av[])
+{
+	void *data = NULL;
+	int nbytes;
+	int nalloc = 1024;
+
+	NEXT_ARG;
+
+	/* get rules or pipes from kernel, resizing array as necessary */
+	nbytes = nalloc;
+
+	while (nbytes >= nalloc) {
+		nalloc = nalloc * 2 ;
+		nbytes = nalloc;
+		if ((data = realloc(data, nbytes)) == NULL)
+			err(EX_OSERR, "realloc");
+		if (do_get_x(IP_FW_GET, data, &nbytes) < 0)
+			err(EX_OSERR, "do_get_x(IP_FW_GET)");
 	}
 }
 
@@ -937,7 +936,7 @@ do_get_x(int optname, void *rule, int *optlen)
 }
 
 int
-ipfw_main(int ac, char **av)
+ipfw3_main(int ac, char **av)
 {
 	int ch;
 
@@ -1025,27 +1024,27 @@ ipfw_main(int ac, char **av)
 	}
 
 	if (!strncmp(*av, "add", strlen(*av))) {
-		load_modules();
-		add(ac, av);
+		module_load();
+		rule_add(ac, av);
 	} else if (!strncmp(*av, "delete", strlen(*av))) {
 		delete_rules(ac, av);
 	} else if (!strncmp(*av, "flush", strlen(*av))) {
-		flush();
+		rule_flush();
 	} else if (!strncmp(*av, "list", strlen(*av))) {
-		load_modules();
-		list(ac, av);
+		module_load();
+		rule_list(ac, av);
 	} else if (!strncmp(*av, "show", strlen(*av))) {
 		do_acct++;
-		load_modules();
-		list(ac, av);
+		module_load();
+		rule_list(ac, av);
 	} else if (!strncmp(*av, "zero", strlen(*av))) {
-		zero(ac, av);
+		rule_zero(ac, av);
 	} else if (!strncmp(*av, "set", strlen(*av))) {
 		set_main(ac, av);
 	} else if (!strncmp(*av, "module", strlen(*av))) {
 		NEXT_ARG;
 		if (!strncmp(*av, "list", strlen(*av))) {
-			list_modules(ac, av);
+			module_list(ac, av);
 		} else {
 			errx(EX_USAGE, "bad ipfw module command `%s'", *av);
 		}
@@ -1197,7 +1196,7 @@ ipfw3_readfile(int ac, char *av[])
 			errx(EX_USAGE, "%s: too many arguments", linename);
 
 		args[i] = NULL;
-		ipfw_main(i, args);
+		ipfw3_main(i, args);
 	}
 	fclose(f);
 	if (pflag) {
@@ -1227,6 +1226,6 @@ main(int ac, char *av[])
 	if (ac > 1 && av[ac - 1][0] == '/' && access(av[ac - 1], R_OK) == 0)
 		ipfw3_readfile(ac, av);
 	else
-		ipfw_main(ac, av);
+		ipfw3_main(ac, av);
 	return EX_OK;
 }
