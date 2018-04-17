@@ -430,6 +430,16 @@ extern int ip_fw3_loaded;
 
 #define	IPFW3_LOADED	(ip_fw3_loaded)
 
+#ifdef IPFIREWALL3_DEBUG
+#define DEBUG(fmt, ...)			\
+do { 						\
+	if (sysctl_var_fw3_debug > 0)           \
+		kprintf(fmt, __VA_ARGS__); 	\
+} while (0)
+#else
+#define DEBUG(fmt, ...)	((void)0)
+#endif
+
 typedef int	ip_fw_ctl_t(struct sockopt *);
 typedef int	ip_fw_chk_t(struct ip_fw_args *);
 typedef struct mbuf *ip_fw_dn_io_t(struct mbuf *, int, int, struct ip_fw_args *);

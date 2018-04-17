@@ -36,8 +36,7 @@
  *
  */
 
-#include "opt_ipfw.h"
-#include "opt_inet.h"
+#include "fw3_opt.h"
 #ifndef INET
 #error IPFIREWALL3 requires INET.
 #endif /* INET */
@@ -91,16 +90,6 @@
 #include <net/dummynet3/ip_dummynet3.h>
 
 MALLOC_DEFINE(M_IPFW3, "IPFW3", "ip_fw3 default module");
-
-#ifdef IPFIREWALL_DEBUG
-#define DPRINTF(fmt, ...)			\
-do { 						\
-	if (sysctl_var_fw3_debug > 0) 		\
-		kprintf(fmt, __VA_ARGS__); 	\
-} while (0)
-#else
-#define DPRINTF(fmt, ...)	((void)0)
-#endif
 
 #define MAX_MODULE		10
 #define MAX_OPCODE_PER_MODULE	100
@@ -170,10 +159,10 @@ SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, verbose, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, static_count, CTLFLAG_RD,
 	&static_count, 0, "Number of static rules");
 
-filter_func filter_funcs[MAX_MODULE][MAX_OPCODE_PER_MODULE];
-struct ipfw3_module fw3_modules[MAX_MODULE];
-struct ipfw3_context *fw3_ctx[MAXCPU];
-struct ipfw3_sync_context fw3_sync_ctx;
+filter_func 			filter_funcs[MAX_MODULE][MAX_OPCODE_PER_MODULE];
+struct ipfw3_module 		fw3_modules[MAX_MODULE];
+struct ipfw3_context 		*fw3_ctx[MAXCPU];
+struct ipfw3_sync_context 	fw3_sync_ctx;
 
 
 void
@@ -778,7 +767,7 @@ ip_fw3_add_rule(struct ipfw_ioc_rule *ioc_rule)
 
 	netisr_domsg(nmsg, 0);
 
-	DPRINTF("++ installed rule %d, static count now %d\n",
+	DEBUG("++ installed rule %d, static count now %d\n",
 			ioc_rule->rulenum, static_count);
 }
 

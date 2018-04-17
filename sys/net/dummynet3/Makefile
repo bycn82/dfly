@@ -2,14 +2,19 @@
 # $DragonFly: src/sys/net/dummynet/Makefile,v 1.7 2008/09/16 12:30:57 sephe Exp $
 
 KMOD=	dummynet3
-SRCS=	ip_dummynet3.c
-SRCS+=	opt_ipdn.h
+SRCS=	fw3_opt.h
+SRCS+=	ip_dummynet3.c
 
 .ifndef BUILDING_WITH_KERNEL
-opt_ipdn.h:
-	echo '#define DUMMYNET 1' > ${.OBJDIR}/${.TARGET}
+fw3_opt.h:
+	echo '#define INET 1' > ${.OBJDIR}/${.TARGET}
+	echo '#define IPFIREWALL3 1' >> ${.OBJDIR}/${.TARGET}
 	# Debug prints
-	#echo '#define DUMMYNET_DEBUG 1' >> ${.OBJDIR}/${.TARGET}
+	#echo '#define IPFIREWALL3_DEBUG 1' >> ${.OBJDIR}/${.TARGET}
+	#
+	#
+	# If you want it to pass all packets by default
+	#echo '#define IPFIREWALL_DEFAULT_TO_ACCEPT 1' >> ${.OBJDIR}/${.TARGET}
 .endif
 
 .include <bsd.kmod.mk>

@@ -32,6 +32,11 @@
  * SUCH DAMAGE.
  */
 
+#include "fw3_opt.h"
+#ifndef INET
+#error IPFIREWALL3 requires INET.
+#endif /* INET */
+
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
