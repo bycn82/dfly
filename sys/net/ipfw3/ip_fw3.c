@@ -143,10 +143,6 @@ ip_fw_ctl_t *ipfw_ctl_table_ptr = NULL;
 ip_fw_ctl_t *ipfw_ctl_sync_ptr = NULL;
 ipfw_log_t *ipfw_log_ptr = NULL;
 
-/* handlers which implemented in ipfw_basic module */
-ipfw_basic_delete_state_t *ipfw_basic_flush_state_prt = NULL;
-ipfw_basic_append_state_t *ipfw_basic_append_state_prt = NULL;
-
 extern int ip_fw_loaded;
 extern struct ipfw3_state_context 	*fw3_state_ctx[MAXCPU];
 int 			sysctl_var_fw3_enable = 1;

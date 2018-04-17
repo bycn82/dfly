@@ -87,9 +87,6 @@ extern struct ipfw3_state_context 	*fw3_state_ctx[MAXCPU];
 extern ip_fw_ctl_t 			*ipfw_ctl_basic_ptr;
 
 extern int 				sysctl_var_fw3_verbose;
-extern ipfw_basic_delete_state_t 	*ipfw_basic_flush_state_prt;
-extern ipfw_basic_append_state_t 	*ipfw_basic_append_state_prt;
-extern ipfw_sync_send_state_t 		*ipfw_sync_send_state_prt;
 
 extern int 			sysctl_var_state_max_tcp_in;
 extern int 			sysctl_var_state_max_udp_in;
@@ -574,14 +571,6 @@ check_dst_n_port(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		*cmd_val = IP_FW_MATCH;
 	else
 		*cmd_val = IP_FW_NOT_MATCH;
-}
-
-
-
-void
-ip_fw3_basic_add_state(struct ipfw3_ioc_state *ioc_state)
-{
-	/* TODO */
 }
 
 int
