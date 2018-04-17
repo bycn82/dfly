@@ -97,6 +97,13 @@ struct nat_state {
 };
 #define LEN_NAT_STATE sizeof(struct nat_state)
 
+struct nat_state2 {
+	uint32_t		src_addr;
+	uint16_t		src_port;
+	time_t			timestamp;
+};
+#define LEN_NAT_STATE2 sizeof(struct nat_state2)
+
 int 	ip_fw3_nat_state_cmp(struct nat_state *s1, struct nat_state *s2);
 
 RB_HEAD(state_tree, nat_state);
@@ -119,6 +126,9 @@ struct cfg_nat {
 struct cfg_alias {
 	LIST_ENTRY(cfg_alias)	next;
 	struct in_addr 		ip;
+	struct nat_state2	*tcp_in[ALIAS_RANGE];
+	struct nat_state2	*udp_in[ALIAS_RANGE];
+	struct nat_state2	*icmp_in[ALIAS_RANGE];
 };
 #define LEN_CFG_ALIAS sizeof(struct cfg_alias)
 
@@ -139,7 +149,9 @@ struct netmsg_nat_add {
 
 struct netmsg_nat_state_add {
 	struct netmsg_base 	base;
-	struct nat_state 	*state;
+	struct nat_state2 	*state;
+	struct in_addr		alias_addr;
+	uint16_t		alias_port;
 	int			proto;
 	int			nat_id;
 };

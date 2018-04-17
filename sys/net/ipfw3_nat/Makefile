@@ -7,7 +7,7 @@ fw3_opt.h:
 	echo '#define INET 1' > ${.OBJDIR}/${.TARGET}
 	echo '#define IPFIREWALL3 1' >> ${.OBJDIR}/${.TARGET}
 	# Debug prints
-	#echo '#define IPFIREWALL3_DEBUG 1' >> ${.OBJDIR}/${.TARGET}
+	echo '#define IPFIREWALL3_DEBUG 1' >> ${.OBJDIR}/${.TARGET}
 	#
 	#
 	# If you want it to pass all packets by default

@@ -165,8 +165,9 @@ check_nat(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 int
 ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 {
-	struct state_tree *tree_in = NULL, *tree_out = NULL;
-	struct nat_state *s, *s2, *dup, *k, key;
+	struct state_tree *tree_out = NULL;
+	struct nat_state *s, *dup, *k, key;
+	struct nat_state2 *s2 = NULL;
 	struct ip *ip = mtod(m, struct ip *);
 	struct in_addr *old_addr = NULL, new_addr;
 	uint16_t *old_port = NULL, new_port;
@@ -180,36 +181,33 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 	memset(k, 0, LEN_NAT_STATE);
 	if (args->oif == NULL) {
 		old_addr = &ip->ip_dst;
-		k->src_addr = args->f_id.src_ip;
 		k->dst_addr = ntohl(args->f_id.dst_ip);
+		LIST_FOREACH(alias, &nat->alias, next) {
+			if (alias->ip.s_addr == ntohl(args->f_id.dst_ip)) {
+				break;
+			}
+		}
 		switch (ip->ip_p) {
 		case IPPROTO_TCP:
-			k->src_port = args->f_id.src_port;
-			k->dst_port = ntohs(args->f_id.dst_port);
-			tree_in = &nat->rb_tcp_in;
 			old_port = &L3HDR(struct tcphdr, ip)->th_dport;
+			s2 = alias->tcp_in[*old_port];
 			csum = &L3HDR(struct tcphdr, ip)->th_sum;
 			break;
 		case IPPROTO_UDP:
-			k->src_port = args->f_id.src_port;
-			k->dst_port = ntohs(args->f_id.dst_port);
-			tree_in = &nat->rb_udp_in;
 			old_port = &L3HDR(struct udphdr, ip)->uh_dport;
+			s2 = alias->udp_in[*old_port];
 			csum = &L3HDR(struct udphdr, ip)->uh_sum;
 			udp = 1;
 			break;
 		case IPPROTO_ICMP:
-			k->src_port = L3HDR(struct icmp, ip)->icmp_id;;
-			k->dst_port = L3HDR(struct icmp, ip)->icmp_id;;
-			tree_in = &nat->rb_icmp_in;
 			old_port = &L3HDR(struct icmp, ip)->icmp_id;
+			s2 = alias->icmp_in[*old_port];
 			csum = &L3HDR(struct icmp, ip)->icmp_cksum;
 			break;
 		default:
 			panic("ipfw3: unsupported proto %u", ip->ip_p);
 		}
-		s = RB_FIND(state_tree, tree_in, k);
-		if (s == NULL) {
+		if (s2 == NULL) {
 			goto oops;
 		}
 	} else {
@@ -301,28 +299,28 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 				s->alias_port = htons(s->src_addr % ALIAS_RANGE);
 				dup = RB_INSERT(state_tree, tree_out, s);
 
-				s2 = kmalloc(LEN_NAT_STATE, M_IPFW3_NAT,
+				s2 = kmalloc(LEN_NAT_STATE2, M_IPFW3_NAT,
 						M_INTWAIT | M_NULLOK | M_ZERO);
 
-				s2->src_addr = args->f_id.dst_ip;
-				s2->dst_addr = alias->ip.s_addr;
+				s2->src_addr = htonl(args->f_id.src_ip);
+				s2->src_port = *old_port;
 
-				s2->src_port = s->alias_port;
-				s2->dst_port = s->alias_port;
-
-				s2->alias_addr = htonl(args->f_id.src_ip);
-				s2->alias_port = *old_port;
-				tree_in = &nat->rb_icmp_in;
-				dup = RB_INSERT(state_tree, tree_in, s2);
+				alias->icmp_in[s->alias_port] = s2;
 				break;
 			default :
 				goto oops;
 			}
 		}
 	}
-	new_addr.s_addr = s->alias_addr;
-	new_port = s->alias_port;
-	s->timestamp = time_uptime;
+	if (args->oif == NULL) {
+		new_addr.s_addr = s2->src_addr;
+		new_port = s2->src_port;
+		s2->timestamp = time_uptime;
+	} else {
+		new_addr.s_addr = s->alias_addr;
+		new_port = s->alias_port;
+		s->timestamp = time_uptime;
+	}
 
 	/* replace src/dst and fix the checksum */
 	if (m->m_pkthdr.csum_flags & (CSUM_UDP | CSUM_TCP | CSUM_TSO)) {
@@ -371,48 +369,37 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 					M_LWKTMSG, M_NOWAIT | M_ZERO);
 			netmsg_init(&msg->base, NULL, &curthread->td_msgport,
 					0, nat_state_add_dispatch);
-			s2 = kmalloc(LEN_NAT_STATE, M_IPFW3_NAT,
+			s2 = kmalloc(LEN_NAT_STATE2, M_IPFW3_NAT,
 					M_INTWAIT | M_NULLOK | M_ZERO);
 
-			s2->src_addr = args->f_id.dst_ip;
-			s2->src_port = s->dst_port;
-
-			s2->dst_addr = alias->ip.s_addr;
-			s2->dst_port = s->alias_port;
-
-			s2->alias_addr = htonl(args->f_id.src_ip);
-			s2->alias_port = htons(args->f_id.src_port);
+			s2->src_addr = htonl(args->f_id.src_ip);
+			s2->src_port = htons(args->f_id.src_port);
 
 			s2->timestamp = s->timestamp;
-
+			msg->alias_addr.s_addr = alias->ip.s_addr;
+			msg->alias_port = s->alias_port;
 			msg->state = s2;
 			msg->nat_id = nat->id;
 			msg->proto = ip->ip_p;
 			netisr_sendmsg(&msg->base, nextcpu);
 		} else {
-			s2 = kmalloc(LEN_NAT_STATE, M_IPFW3_NAT,
+			s2 = kmalloc(LEN_NAT_STATE2, M_IPFW3_NAT,
 					M_INTWAIT | M_NULLOK | M_ZERO);
 
-			s2->src_addr = args->f_id.dst_ip;
-			s2->src_port = s->dst_port;
-
-			s2->dst_addr = alias->ip.s_addr;
-			s2->dst_port = s->alias_port;
-
-			s2->alias_addr = htonl(args->f_id.src_ip);
-			s2->alias_port = htons(args->f_id.src_port);
+			s2->src_addr = htonl(args->f_id.src_ip);
+			s2->src_port = htons(args->f_id.src_port);
 
 			s2->timestamp = s->timestamp;
 			if (ip->ip_p == IPPROTO_TCP) {
-				tree_in = &nat->rb_tcp_in;
+				alias->tcp_in[s->alias_port] = s2;
 			} else {
-				tree_in = &nat->rb_udp_in;
+				alias->udp_in[s->alias_port] = s2;
 			}
-			dup = RB_INSERT(state_tree, tree_in, s2);
 		}
 	}
 	return IP_FW_NAT;
 oops:
+	DEBUG("oops\n");
 	return IP_FW_DENY;
 }
 
@@ -661,19 +648,24 @@ nat_state_add_dispatch(netmsg_t add_msg)
 	struct ip_fw3_nat_context *nat_ctx;
 	struct netmsg_nat_state_add *msg;
 	struct cfg_nat *nat;
-	struct state_tree *tree_in = NULL;
-	struct nat_state *s2;
+	struct nat_state2 *s2;
+	struct cfg_alias *alias;
 
 	nat_ctx = ip_fw3_nat_ctx[mycpuid];
 	msg = (struct netmsg_nat_state_add *)add_msg;
 	nat = nat_ctx->nats[msg->nat_id - 1];
-	if (msg->proto == IPPROTO_TCP) {
-		tree_in = &nat->rb_tcp_in;
-	} else {
-		tree_in = &nat->rb_udp_in;
+
+	LIST_FOREACH(alias, &nat->alias, next) {
+		if (alias->ip.s_addr == msg->alias_addr.s_addr) {
+			break;
+		}
 	}
 	s2 = msg->state;
-	RB_INSERT(state_tree, tree_in, msg->state);
+	if (msg->proto == IPPROTO_TCP) {
+		alias->tcp_in[msg->alias_port - ALIAS_BEGIN] = s2;
+	} else {
+		alias->udp_in[msg->alias_port - ALIAS_BEGIN] = s2;
+	}
 }
 
 /*
