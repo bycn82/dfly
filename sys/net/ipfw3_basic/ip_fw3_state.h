@@ -88,8 +88,6 @@ struct ipfw3_state_context {
 #define LEN_STATE_CTX sizeof(struct ipfw3_state_context)
 
 
-
-
 void	ip_fw3_state_cleanup_dispatch(netmsg_t nmsg);
 void	ip_fw3_state_cleanup(void *dummy __unused);
 void	ip_fw3_state_append_dispatch(netmsg_t nmsg);

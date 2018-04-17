@@ -193,16 +193,20 @@ ip_fw3_ctl_state_get(struct sockopt *sopt)
 
 	size_t sopt_size, total_len = 0;
 	struct ipfw3_ioc_state *ioc;
+	int ioc_rule_id;
 
+	ioc_rule_id = *((int *)(sopt->sopt_val));
 	sopt_size = sopt->sopt_valsize;
 	ioc = (struct ipfw3_ioc_state *)sopt->sopt_val;
 	/* icmp states only in CPU 0 */
 	int cpu = 0;
 
-	/* udp states */
+	/* icmp states */
 	for (cpu = 0; cpu < ncpus; cpu++) {
+kprintf("cpu #%d \n", cpu);
 		state_ctx = fw3_state_ctx[cpu];
-		RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_udp_out) {
+		RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_icmp_in) {
+kprintf("icmp in \n");
 				total_len += LEN_IOC_FW3_STATE;
 				if (total_len > sopt_size)
 					goto nospace;
@@ -211,7 +215,22 @@ ip_fw3_ctl_state_get(struct sockopt *sopt)
 				ioc->src_port = s->src_port;
 				ioc->dst_port = s->dst_port;
 				ioc->cpu_id = cpu;
-				ioc->proto = IPPROTO_UDP;
+				ioc->proto = IPPROTO_ICMP;
+				ioc->life = s->timestamp +
+					sysctl_var_udp_timeout - time_uptime;
+				ioc++;
+		}
+		RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_icmp_out) {
+kprintf("icmp out \n");
+				total_len += LEN_IOC_FW3_STATE;
+				if (total_len > sopt_size)
+					goto nospace;
+				ioc->src_addr.s_addr = ntohl(s->src_addr);
+				ioc->dst_addr.s_addr = s->dst_addr;
+				ioc->src_port = s->src_port;
+				ioc->dst_port = s->dst_port;
+				ioc->cpu_id = cpu;
+				ioc->proto = IPPROTO_ICMP;
 				ioc->life = s->timestamp +
 					sysctl_var_udp_timeout - time_uptime;
 				ioc++;

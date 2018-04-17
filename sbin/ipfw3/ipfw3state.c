@@ -164,12 +164,13 @@ state_list(int ac, char *av[])
 			err(EX_OSERR, "do_get_x(IP_FW_NAT_GET_RECORD)");
 		}
 	}
+
 	if (nbytes == 0)
 		exit(EX_OK);
 
 	struct ipfw3_ioc_state *ioc;
 	ioc =(struct ipfw3_ioc_state *)data;
-	int count = nbytes / LEN_IOC_NAT_STATE;
+	int count = nbytes / LEN_IOC_FW3_STATE;
 	int i;
 	for (i = 0; i < count; i ++) {
 		printf("%d %d", ioc->rule_id, ioc->cpu_id);
