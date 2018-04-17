@@ -177,7 +177,7 @@ filter_func filter_funcs[MAX_MODULE][MAX_OPCODE_PER_MODULE];
 struct ipfw3_module fw3_modules[MAX_MODULE];
 struct ipfw3_context *fw3_ctx[MAXCPU];
 struct ipfw3_sync_context fw3_sync_ctx;
-static int ipfw_ctl(struct sockopt *sopt);
+static int ip_fw3_ctl(struct sockopt *sopt);
 
 
 void
@@ -1432,7 +1432,7 @@ ip_fw3_ctl_set_disable(uint32_t disable, uint32_t enable)
 
 
 /*
- * ip_fw3_ctl_x - extended version of ipfw_ctl
+ * ip_fw3_ctl_x - extended version of ip_fw3_ctl
  * remove the x_header, and adjust the sopt_name,sopt_val and sopt_valsize.
  */
 int
@@ -1443,7 +1443,7 @@ ip_fw3_ctl_x(struct sockopt *sopt)
 	sopt->sopt_name = x_header->opcode;
 	sopt->sopt_valsize -= sizeof(ip_fw_x_header);
 	bcopy(++x_header, sopt->sopt_val, sopt->sopt_valsize);
-	return ipfw_ctl(sopt);
+	return ip_fw3_ctl(sopt);
 }
 
 
@@ -1451,7 +1451,7 @@ ip_fw3_ctl_x(struct sockopt *sopt)
  * {set|get}sockopt parser.
  */
 static int
-ipfw_ctl(struct sockopt *sopt)
+ip_fw3_ctl(struct sockopt *sopt)
 {
 	int error = 0;
 	switch (sopt->sopt_name) {
@@ -1520,7 +1520,7 @@ ipfw_ctl(struct sockopt *sopt)
 			}
 			break;
 		default:
-			kprintf("ipfw_ctl invalid option %d\n",
+			kprintf("ip_fw3_ctl invalid option %d\n",
 				sopt->sopt_name);
 			error = EINVAL;
 	}
@@ -1589,7 +1589,7 @@ ip_fw3_ctl_sockopt(struct sockopt *sopt)
 					sopt->sopt_name == IP_FW_RESETLOG);
 			break;
 		default:
-			kprintf("ipfw_ctl invalid option %d\n",
+			kprintf("ip_fw3_ctl invalid option %d\n",
 				sopt->sopt_name);
 			error = EINVAL;
 	}
