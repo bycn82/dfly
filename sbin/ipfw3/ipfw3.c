@@ -61,11 +61,12 @@
 
 
 #include <net/ipfw3/ip_fw3.h>
-#include <net/ipfw3/ip_fw3_table.h>
-#include <net/ipfw3/ip_fw3_sync.h>
-#include <net/dummynet3/ip_dummynet3.h>
+#include <net/ipfw3_basic/ip_fw3_table.h>
+#include <net/ipfw3_basic/ip_fw3_state.h>
+#include <net/ipfw3_basic/ip_fw3_sync.h>
 #include <net/ipfw3_basic/ip_fw3_basic.h>
 #include <net/ipfw3_nat/ip_fw3_nat.h>
+#include <net/dummynet3/ip_dummynet3.h>
 
 #include "ipfw3.h"
 #include "ipfw3basic.h"
@@ -450,22 +451,10 @@ done:
 }
 
 static void
-show_states(struct ipfw_ioc_state *d, int pcwidth, int bcwidth)
-{
-	printf(" CPU %d", d->cpu_id);
-	printf("\n");
-}
-
-
-static void
 list(int ac, char *av[])
 {
-	struct ipfw_ioc_state *dynrules, *d;
-	struct ipfw_ioc_rule *r;
-
 	void *data = NULL;
-	int bcwidth, n, nbytes, nstat, ndyn, pcwidth, width;
-	int exitval = EX_OK;
+	int nbytes;
 	int nalloc = 1024;
 
 	NEXT_ARG;
@@ -481,66 +470,6 @@ list(int ac, char *av[])
 		if (do_get_x(IP_FW_GET, data, &nbytes) < 0)
 			err(EX_OSERR, "do_get_x(IP_FW_GET)");
 	}
-
-	/*
-	 * Count static rules.
-	 */
-	r = data;
-	nstat = r->static_count;
-
-	/*
-	 * Count dynamic rules. This is easier as they have
-	 * fixed size.
-	 */
-	dynrules = (struct ipfw_ioc_state *)((void *)r + r->static_len);
-	ndyn = (nbytes - r->static_len) / sizeof(*dynrules);
-
-	/* if showing stats, figure out column widths ahead of time */
-	bcwidth = pcwidth = 0;
-	if (do_acct) {
-		for (n = 0, r = data; n < nstat;
-			n++, r = (void *)r + IOC_RULESIZE(r)) {
-			/* packet counter */
-			width = snprintf(NULL, 0, "%ju", (uintmax_t)r->pcnt);
-			if (width > pcwidth)
-				pcwidth = width;
-
-			/* byte counter */
-			width = snprintf(NULL, 0, "%ju", (uintmax_t)r->bcnt);
-			if (width > bcwidth)
-				bcwidth = width;
-		}
-	}
-
-
-	/* if no rule numbers were specified, list all rules */
-	if (ac == 0) {
-		if (do_dynamic != 2) {
-			for (n = 0, r = data; n < nstat; n++,
-				r = (void *)r + IOC_RULESIZE(r)) {
-				show_rules(r, pcwidth, bcwidth);
-			}
-		}
-		if (do_dynamic && ndyn) {
-			if (do_dynamic != 2) {
-				printf("## States (%d):\n", ndyn);
-			}
-			for (n = 0, d = dynrules; n < ndyn; n++, d++)
-				show_states(d, pcwidth, bcwidth);
-		}
-		goto done;
-	}
-
-
-
-
-	ac = 0;
-
-done:
-	free(data);
-
-	if (exitval != EX_OK)
-		exit(exitval);
 }
 
 

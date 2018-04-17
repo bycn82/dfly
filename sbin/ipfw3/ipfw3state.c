@@ -69,11 +69,12 @@
 #include <net/ethernet.h>
 
 #include <net/ipfw3/ip_fw3.h>
-#include <net/ipfw3/ip_fw3_table.h>
-#include <net/ipfw3/ip_fw3_sync.h>
-#include <net/dummynet3/ip_dummynet3.h>
 #include <net/ipfw3_basic/ip_fw3_basic.h>
+#include <net/ipfw3_basic/ip_fw3_table.h>
+#include <net/ipfw3_basic/ip_fw3_state.h>
+#include <net/ipfw3_basic/ip_fw3_sync.h>
 #include <net/ipfw3_nat/ip_fw3_nat.h>
+#include <net/dummynet3/ip_dummynet3.h>
 
 #include "ipfw3.h"
 #include "ipfw3basic.h"
@@ -130,7 +131,7 @@ state_flush(int ac, char *av[])
 
 
 void
-state_show(struct ipfw_ioc_state *d, int pcwidth, int bcwidth)
+state_show(struct ipfw3_ioc_state *d, int pcwidth, int bcwidth)
 {
 	/* TODO */
 }
@@ -138,7 +139,7 @@ state_show(struct ipfw_ioc_state *d, int pcwidth, int bcwidth)
 void
 state_list(int ac, char *av[])
 {
-	struct ipfw_ioc_state *dynrules, *d;
+	struct ipfw3_ioc_state *dynrules, *d;
 	struct ipfw_ioc_rule *r;
 
 	u_long rnum;
@@ -173,7 +174,7 @@ state_list(int ac, char *av[])
 	 * Count dynamic rules. This is easier as they have
 	 * fixed size.
 	 */
-	dynrules = (struct ipfw_ioc_state *)((void *)r + r->static_len);
+	dynrules = (struct ipfw3_ioc_state *)((void *)r + r->static_len);
 	ndyn = (nbytes - r->static_len) / sizeof(*dynrules);
 
 	/* if showing stats, figure out column widths ahead of time */

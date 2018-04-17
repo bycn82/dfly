@@ -886,7 +886,6 @@ ip_fw3_basic_init(void)
 	return 0;
 }
 
-
 int
 ip_fw3_basic_fini(void)
 {

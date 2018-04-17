@@ -81,21 +81,6 @@ enum ipfw3_basic_opcodes {
 		((state->expiry != 0) && (state->expiry < time_second))
 
 
-struct ipfw_ioc_state {
-	struct in_addr		src_addr;
-	struct in_addr		dst_addr;
-	u_short			src_port;
-	u_short			dst_port;
-	int			cpu_id;
-	int			proto;
-	int			direction;
-	time_t			life;
-};
-#define LEN_IOC_FW3_STATE sizeof(struct ipfw_ioc_state);
-
-
-
-
 #ifdef _KERNEL
 
 

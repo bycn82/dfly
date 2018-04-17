@@ -391,7 +391,7 @@ typedef struct _ip_fw_x_header {
 #define IP_FW_STATE_ADD		56   /* add one state */
 #define IP_FW_STATE_DEL		57   /* delete states of one rulenum */
 #define IP_FW_STATE_FLUSH	58   /* flush all states */
-#define IP_FW_STATE_GET		59   /* flush all states */
+#define IP_FW_STATE_GET		59   /* get all states */
 
 #define IP_FW_TABLE_CREATE	73	/* table_create 	*/
 #define IP_FW_TABLE_DELETE	74	/* table_delete 	*/
@@ -475,11 +475,12 @@ struct ipfw3_context {
 
 
 typedef void (*filter_func)(int *cmd_ctl,int *cmd_val,struct ip_fw_args **args,
-struct ip_fw **f,ipfw_insn *cmd, uint16_t ip_len);
-void ip_fw3_register_filter_funcs(int module,int opcode,filter_func func);
-void unregister_ipfw_filter_funcs(int module,filter_func func);
-void ip_fw3_register_module(int module_id,char *module_name);
-int ip_fw3_unregister_module(int module_id);
+			struct ip_fw **f,ipfw_insn *cmd, uint16_t ip_len);
+
+void 	ip_fw3_register_filter_funcs(int module,int opcode,filter_func func);
+void 	ip_fw3_unregister_filter_funcs(int module,filter_func func);
+void 	ip_fw3_register_module(int module_id,char *module_name);
+int 	ip_fw3_unregister_module(int module_id);
 int	ip_fw3_ctl_sockopt(struct sockopt *sopt);
 
 
@@ -489,21 +490,6 @@ struct ipfw3_module{
 	int type;
 	int id;
 	char name[20];
-};
-
-struct ipfw_ioc_flowid {
-	uint16_t	type;	/* ETHERTYPE_ */
-	uint16_t	pad;
-	union {
-		struct {
-			uint32_t dst_ip;
-			uint32_t src_ip;
-			uint16_t dst_port;
-			uint16_t src_port;
-			uint8_t proto;
-		} ip;
-		uint8_t pad[64];
-	} u;
 };
 
 

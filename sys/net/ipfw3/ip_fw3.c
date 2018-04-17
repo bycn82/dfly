@@ -1548,11 +1548,9 @@ ip_fw3_ctl_sockopt(struct sockopt *sopt)
 		case IP_FW_MODULE:
 			error = ip_fw3_ctl_get_modules(sopt);
 			break;
-
 		case IP_FW_FLUSH:
 			ip_fw3_ctl_flush_rule(0);
 			break;
-
 		case IP_FW_ADD:
 			error = ip_fw3_ctl_add_rule(sopt);
 			break;
