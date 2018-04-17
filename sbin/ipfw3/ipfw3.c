@@ -948,10 +948,12 @@ rule_show(struct ipfw_ioc_rule *rule, int pcwidth, int bcwidth)
 	/*
 	 * show other filters
 	 */
-	m = mappings;
 	l = rule->act_ofs;
-	for (cmd = rule->cmd; l > 0; l -= F_LEN(cmd)) {
+	cmd = rule->cmd;
+	m = mappings;
+	for ( ; l > 0; ) {
 		show_filter(cmd, "other", FILTER);
+		l -= F_LEN(cmd);
 		cmd=(ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd));
 	}
 
