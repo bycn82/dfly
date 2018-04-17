@@ -728,15 +728,12 @@ rule_flush(void)
 void
 rule_list(int ac, char *av[])
 {
-	struct ipfw_ioc_rule *r;
+	struct ipfw_ioc_rule *rule;
 
-	u_long rnum;
 	void *data = NULL;
 	int bcwidth, n, nbytes, nstat, pcwidth, width;
-	int exitval = EX_OK, lac;
-	char **lav, *endptr;
-	int seen = 0;
 	int nalloc = 1024;
+	int the_rule_num = 0;
 
 	NEXT_ARG;
 
@@ -755,64 +752,47 @@ rule_list(int ac, char *av[])
 	/*
 	 * Count static rules.
 	 */
-	r = data;
-	nstat = r->static_count;
-
+	rule = data;
+	nstat = rule->static_count;
+printf("nbytes %d count %d \n",nbytes, nstat);
 	bcwidth = pcwidth = 0;
 	if (do_acct) {
-		for (n = 0, r = data; n < nstat;
-			n++, r = (void *)r + IOC_RULESIZE(r)) {
+		for (n = 0, rule = data; n < nstat;
+			n++, rule = (void *)rule + IOC_RULESIZE(rule)) {
 			/* packet counter */
-			width = snprintf(NULL, 0, "%ju", (uintmax_t)r->pcnt);
+			width = snprintf(NULL, 0, "%ju", (uintmax_t)rule->pcnt);
 			if (width > pcwidth)
 				pcwidth = width;
 
 			/* byte counter */
-			width = snprintf(NULL, 0, "%ju", (uintmax_t)r->bcnt);
+			width = snprintf(NULL, 0, "%ju", (uintmax_t)rule->bcnt);
 			if (width > bcwidth)
 				bcwidth = width;
 		}
 	}
 
 
-	/* if no rule numbers were specified, list all rules */
-	if (ac == 0) {
-		if (do_dynamic != 2) {
-			for (n = 0, r = data; n < nstat; n++,
-				r = (void *)r + IOC_RULESIZE(r)) {
-				rule_show(r, pcwidth, bcwidth);
-			}
+	if (ac == 1) {
+		the_rule_num = atoi(*av);
+	}
+
+	for (n = 0, rule = data; n < nstat; n++, rule = (void *)rule + IOC_RULESIZE(rule)) {
+		if(the_rule_num == 0 || rule->rulenum == the_rule_num) {
+			rule_show(rule, pcwidth, bcwidth);
 		}
 	}
 
-	/* display specific rules requested on command line */
-
-	if (do_dynamic != 2) {
-		for (lac = ac, lav = av; lac != 0; lac--) {
-			/* convert command line rule # */
-			rnum = strtoul(*lav++, &endptr, 10);
-			if (*endptr) {
-				exitval = EX_USAGE;
-				warnx("invalid rule number: %s", *(lav - 1));
-				continue;
-			}
-			for (n = seen = 0, r = data; n < nstat;
-				n++, r = (void *)r + IOC_RULESIZE(r) ) {
-				if (r->rulenum > rnum)
-					break;
-				if (r->rulenum == rnum) {
-					rule_show(r, pcwidth, bcwidth);
-					seen = 1;
-				}
-			}
-			if (!seen) {
-				/* give precedence to other error(s) */
-				if (exitval == EX_OK)
-					exitval = EX_UNAVAILABLE;
-				warnx("rule %lu does not exist", rnum);
-			}
+	int total_len = 0;
+	n = 0;
+	for (rule = data; rule != NULL && n < 6; n++) {
+		if(the_rule_num == 0 || rule->rulenum == the_rule_num) {
+			rule_show(rule, pcwidth, bcwidth);
 		}
+		total_len += IOC_RULESIZE(rule);
+		printf("n = %d nbytes %d total %d\n", n, nbytes, total_len);
+		rule = (void *)rule + IOC_RULESIZE(rule);
 	}
+
 }
 
 void
