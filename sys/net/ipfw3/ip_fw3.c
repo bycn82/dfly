@@ -1461,71 +1461,19 @@ ip_fw3_ctl_x(struct sockopt *sopt)
 static int
 ipfw_ctl(struct sockopt *sopt)
 {
-	int error, rulenum;
-	uint32_t *masks;
-	size_t size;
-
-	error = 0;
+	int error = 0;
 	switch (sopt->sopt_name) {
 		case IP_FW_X:
 			ip_fw3_ctl_x(sopt);
 			break;
 		case IP_FW_GET:
-			error = ip_fw3_ctl_get_rules(sopt);
-			break;
 		case IP_FW_MODULE:
-			error = ip_fw3_ctl_get_modules(sopt);
-			break;
-
 		case IP_FW_FLUSH:
-			ip_fw3_ctl_flush_rule(0);
-			break;
-
 		case IP_FW_ADD:
-			error = ip_fw3_ctl_add_rule(sopt);
-			break;
-
 		case IP_FW_DEL:
-			/*
-			 * IP_FW_DEL is used for deleting single rules or sets,
-			 * and (ab)used to atomically manipulate sets.
-			 * Argument size is used to distinguish between the two:
-			 *	sizeof(uint32_t)
-			 *	delete single rule or set of rules,
-			 *	or reassign rules (or sets) to a different set.
-			 *	2 * sizeof(uint32_t)
-			 *	atomic disable/enable sets.
-			 *	first uint32_t contains sets to be disabled,
-			 *	second uint32_t contains sets to be enabled.
-			 */
-			masks = sopt->sopt_val;
-			size = sopt->sopt_valsize;
-			if (size == sizeof(*masks)) {
-				/*
-				 * Delete or reassign static rule
-				 */
-				error = ip_fw3_ctl_alter(masks[0]);
-			} else if (size == (2 * sizeof(*masks))) {
-				/*
-				 * Set enable/disable
-				 */
-				ip_fw3_ctl_set_disable(masks[0], masks[1]);
-			} else {
-				error = EINVAL;
-			}
-			break;
 		case IP_FW_ZERO:
-		case IP_FW_RESETLOG: /* argument is an int, the rule number */
-			rulenum = 0;
-			if (sopt->sopt_valsize != 0) {
-				error = soopt_to_kbuf(sopt, &rulenum,
-						sizeof(int), sizeof(int));
-				if (error) {
-					break;
-				}
-			}
-			error = ip_fw3_ctl_zero_entry(rulenum,
-					sopt->sopt_name == IP_FW_RESETLOG);
+		case IP_FW_RESETLOG:
+			error = ip_fw3_ctl_sockopt(sopt);
 			break;
 		case IP_FW_NAT_ADD:
 		case IP_FW_NAT_DEL:
@@ -1578,6 +1526,77 @@ ipfw_ctl(struct sockopt *sopt)
 			if (ipfw_ctl_sync_ptr != NULL) {
 				error = ipfw_ctl_sync_ptr(sopt);
 			}
+			break;
+		default:
+			kprintf("ipfw_ctl invalid option %d\n",
+				sopt->sopt_name);
+			error = EINVAL;
+	}
+	return error;
+}
+
+int
+ip_fw3_ctl_sockopt(struct sockopt *sopt)
+{
+	int error = 0, rulenum;
+	uint32_t *masks;
+	size_t size;
+	switch (sopt->sopt_name) {
+		case IP_FW_GET:
+			error = ip_fw3_ctl_get_rules(sopt);
+			break;
+		case IP_FW_MODULE:
+			error = ip_fw3_ctl_get_modules(sopt);
+			break;
+
+		case IP_FW_FLUSH:
+			ip_fw3_ctl_flush_rule(0);
+			break;
+
+		case IP_FW_ADD:
+			error = ip_fw3_ctl_add_rule(sopt);
+			break;
+		case IP_FW_DEL:
+			/*
+			 * IP_FW_DEL is used for deleting single rules or sets,
+			 * and (ab)used to atomically manipulate sets.
+			 * Argument size is used to distinguish between the two:
+			 *	sizeof(uint32_t)
+			 *	delete single rule or set of rules,
+			 *	or reassign rules (or sets) to a different set.
+			 *	2 * sizeof(uint32_t)
+			 *	atomic disable/enable sets.
+			 *	first uint32_t contains sets to be disabled,
+			 *	second uint32_t contains sets to be enabled.
+			 */
+			masks = sopt->sopt_val;
+			size = sopt->sopt_valsize;
+			if (size == sizeof(*masks)) {
+				/*
+				 * Delete or reassign static rule
+				 */
+				error = ip_fw3_ctl_alter(masks[0]);
+			} else if (size == (2 * sizeof(*masks))) {
+				/*
+				 * Set enable/disable
+				 */
+				ip_fw3_ctl_set_disable(masks[0], masks[1]);
+			} else {
+				error = EINVAL;
+			}
+			break;
+		case IP_FW_ZERO:
+		case IP_FW_RESETLOG: /* argument is an int, the rule number */
+			rulenum = 0;
+			if (sopt->sopt_valsize != 0) {
+				error = soopt_to_kbuf(sopt, &rulenum,
+						sizeof(int), sizeof(int));
+				if (error) {
+					break;
+				}
+			}
+			error = ip_fw3_ctl_zero_entry(rulenum,
+					sopt->sopt_name == IP_FW_RESETLOG);
 			break;
 		default:
 			kprintf("ipfw_ctl invalid option %d\n",

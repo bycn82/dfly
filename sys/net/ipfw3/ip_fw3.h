@@ -480,6 +480,7 @@ void ip_fw3_register_filter_funcs(int module,int opcode,filter_func func);
 void unregister_ipfw_filter_funcs(int module,filter_func func);
 void ip_fw3_register_module(int module_id,char *module_name);
 int ip_fw3_unregister_module(int module_id);
+int	ip_fw3_ctl_sockopt(struct sockopt *sopt);
 
 
 #define IPFW_USR_F_NORULE	0x01
