@@ -132,14 +132,14 @@ match_token(struct char_int_map *table, char *string)
 	return 0;
 }
 
-static void
+void
 get_modules(char *modules_str, int len)
 {
 	if (do_get_x(IP_FW_MODULE, modules_str, &len) < 0)
 		errx(EX_USAGE, "ipfw3 not loaded.");
 }
 
-static void
+void
 list_modules(int ac, char *av[])
 {
 	void *module_str = NULL;
@@ -151,7 +151,7 @@ list_modules(int ac, char *av[])
 	printf("%s\n", (char *)module_str);
 }
 
-static void
+void
 load_modules(void)
 {
 	const char *error;
@@ -313,7 +313,7 @@ int show_filter(ipfw_insn *cmd, char *word, int type)
 	return 0;
 }
 
-static void
+void
 show_rules(struct ipfw_ioc_rule *rule, int pcwidth, int bcwidth)
 {
 	static int twidth = 0;
@@ -450,7 +450,7 @@ done:
 	printf("\n");
 }
 
-static void
+void
 list(int ac, char *av[])
 {
 	void *data = NULL;
@@ -473,8 +473,7 @@ list(int ac, char *av[])
 }
 
 
-
-static void
+void
 help(void)
 {
 	fprintf(stderr, "usage: ipfw [options]\n"
@@ -496,7 +495,7 @@ help(void)
 }
 
 
-static void
+void
 delete_rules(int ac, char *av[])
 {
 	struct dn_ioc_pipe pipe;
@@ -550,7 +549,7 @@ delete_rules(int ac, char *av[])
  * of the current command, and also cleans up the first word of
  * the new command in case it has been clobbered before.
  */
-static ipfw_insn*
+ipfw_insn*
 next_cmd(ipfw_insn *cmd)
 {
 	cmd += F_LEN(cmd);
@@ -565,7 +564,7 @@ next_cmd(ipfw_insn *cmd)
  *
  *
  */
-static void
+void
 add(int ac, char *av[])
 {
 	/*
@@ -819,7 +818,7 @@ done:
 		show_rules(rule, 10, 10);
 }
 
-static void
+void
 zero(int ac, char *av[])
 {
 	int rulenum;
@@ -854,7 +853,7 @@ zero(int ac, char *av[])
 		exit(failed);
 }
 
-static void
+void
 flush(void)
 {
 	int cmd = IP_FW_FLUSH;
@@ -937,7 +936,7 @@ do_get_x(int optname, void *rule, int *optlen)
 	return retval;
 }
 
-static int
+int
 ipfw_main(int ac, char **av)
 {
 	int ch;
@@ -1080,8 +1079,8 @@ ipfw_main(int ac, char **av)
 	return 0;
 }
 
-static void
-ipfw_readfile(int ac, char *av[])
+void
+ipfw3_readfile(int ac, char *av[])
 {
 	char	buf[BUFSIZ];
 	char	*a, *p, *args[MAX_ARGS], *cmd = NULL;
@@ -1226,7 +1225,7 @@ main(int ac, char *av[])
 	prepare_default_funcs();
 
 	if (ac > 1 && av[ac - 1][0] == '/' && access(av[ac - 1], R_OK) == 0)
-		ipfw_readfile(ac, av);
+		ipfw3_readfile(ac, av);
 	else
 		ipfw_main(ac, av);
 	return EX_OK;
