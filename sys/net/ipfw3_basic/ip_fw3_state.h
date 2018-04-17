@@ -87,9 +87,11 @@ struct ipfw3_state_context {
 };
 #define LEN_STATE_CTX sizeof(struct ipfw3_state_context)
 
+void	check_check_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
+		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
+void	check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
+		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
 
-void	state_insert(int *the_count, struct fw3_state_tree *the_tree,
-			struct ipfw3_state *k, struct ip_fw *f);
 void	ip_fw3_state_cleanup_dispatch(netmsg_t nmsg);
 void	ip_fw3_state_cleanup(void *dummy __unused);
 void	ip_fw3_state_append_dispatch(netmsg_t nmsg);

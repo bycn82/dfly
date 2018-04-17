@@ -95,8 +95,6 @@ void	check_skipto(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
 void	check_forward(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
-void	check_check_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
-		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
 void	check_in(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
 void	check_out(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
@@ -122,8 +120,6 @@ void	check_to_lookup(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 void	check_to_me(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
 void	check_to_mask(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
-		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
-void	check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
 void	check_tag(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
