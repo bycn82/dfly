@@ -732,7 +732,7 @@ rule_list(int ac, char *av[])
 
 	u_long rnum;
 	void *data = NULL;
-	int bcwidth, n, nbytes, nstat, pcwidth;
+	int bcwidth, n, nbytes, nstat, pcwidth, width;
 	int exitval = EX_OK, lac;
 	char **lav, *endptr;
 	int seen = 0;
@@ -758,7 +758,21 @@ rule_list(int ac, char *av[])
 	r = data;
 	nstat = r->static_count;
 
+	bcwidth = pcwidth = 0;
+	if (do_acct) {
+		for (n = 0, r = data; n < nstat;
+			n++, r = (void *)r + IOC_RULESIZE(r)) {
+			/* packet counter */
+			width = snprintf(NULL, 0, "%ju", (uintmax_t)r->pcnt);
+			if (width > pcwidth)
+				pcwidth = width;
 
+			/* byte counter */
+			width = snprintf(NULL, 0, "%ju", (uintmax_t)r->bcnt);
+			if (width > bcwidth)
+				bcwidth = width;
+		}
+	}
 
 
 	/* if no rule numbers were specified, list all rules */
