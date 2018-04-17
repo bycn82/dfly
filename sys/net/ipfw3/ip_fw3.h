@@ -435,13 +435,6 @@ typedef int	ip_fw_chk_t(struct ip_fw_args *);
 typedef struct mbuf *ip_fw_dn_io_t(struct mbuf *, int, int, struct ip_fw_args *);
 typedef void *ipfw_log_t(struct mbuf *m, struct ether_header *eh, uint16_t id);
 
-/*
- * Function definitions.
- */
-int     ip_fw3_sockopt(struct sockopt *);
-int	ip_fw3_ctl_x(struct sockopt *sopt);
-
-
 #ifndef _IPFW2_H
 
 int	ip_fw_sockopt(struct sockopt *);
@@ -472,17 +465,6 @@ struct ipfw3_context {
 	uint16_t	state_hash_size;
 	uint32_t	ipfw_set_disable;
 };
-
-
-typedef void (*filter_func)(int *cmd_ctl,int *cmd_val,struct ip_fw_args **args,
-			struct ip_fw **f,ipfw_insn *cmd, uint16_t ip_len);
-
-void 	ip_fw3_register_filter_funcs(int module,int opcode,filter_func func);
-void 	ip_fw3_unregister_filter_funcs(int module,filter_func func);
-void 	ip_fw3_register_module(int module_id,char *module_name);
-int 	ip_fw3_unregister_module(int module_id);
-int	ip_fw3_ctl_sockopt(struct sockopt *sopt);
-
 
 #define IPFW_USR_F_NORULE	0x01
 
@@ -519,6 +501,68 @@ struct ipfw3_module{
 
 #define L3HDR(T, ip) ((T *)((uint32_t *)(ip) + (ip)->ip_hl))
 
+
+typedef void (*filter_func)(int *cmd_ctl,int *cmd_val,struct ip_fw_args **args,
+			struct ip_fw **f,ipfw_insn *cmd, uint16_t ip_len);
+
+void	check_accept(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
+		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
+void	check_deny(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
+		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
+
+void    ip_fw3_register_module(int module_id,char *module_name);
+int     ip_fw3_unregister_module(int module_id);
+void    ip_fw3_register_filter_funcs(int module, int opcode, filter_func func);
+void 	ip_fw3_unregister_filter_funcs(int module,filter_func func);
+
+void	init_module(void);
+int	ip_fw3_free_rule(struct ip_fw *rule);
+int	ip_fw3_chk(struct ip_fw_args *args);
+struct mbuf *ip_fw3_dummynet_io(struct mbuf *m, int pipe_nr, int dir, struct ip_fw_args *fwa);
+void	ip_fw3_inc_static_count(struct ip_fw *rule);
+void	ip_fw3_dec_static_count(struct ip_fw *rule);
+void	ip_fw3_add_rule_dispatch(netmsg_t nmsg);
+void	ip_fw3_add_rule(struct ipfw_ioc_rule *ioc_rule);
+struct ip_fw *ip_fw3_delete_rule(struct ipfw3_context *ctx,
+		 struct ip_fw *prev, struct ip_fw *rule);
+void	ip_fw3_flush_rule_dispatch(netmsg_t nmsg);
+void	ip_fw3_ctl_flush_rule(int kill_default);
+void	ip_fw3_delete_rule_dispatch(netmsg_t nmsg);
+int	ip_fw3_alt_delete_rule(uint16_t rulenum);
+void	ip_fw3_alt_delete_ruleset_dispatch(netmsg_t nmsg);
+void	ip_fw3_disable_ruleset_state_dispatch(netmsg_t nmsg);
+int	ip_fw3_alt_delete_ruleset(uint8_t set);
+void	ip_fw3_alt_move_rule_dispatch(netmsg_t nmsg);
+int	ip_fw3_alt_move_rule(uint16_t rulenum, uint8_t set);
+void	ip_fw3_alt_move_ruleset_dispatch(netmsg_t nmsg);
+int	ip_fw3_alt_move_ruleset(uint8_t from_set, uint8_t to_set);
+void	ip_fw3_alt_swap_ruleset_dispatch(netmsg_t nmsg);
+int	ip_fw3_alt_swap_ruleset(uint8_t set1, uint8_t set2);
+int	ip_fw3_ctl_alter(uint32_t arg);
+void	clear_counters(struct ip_fw *rule);
+void	ip_fw3_zero_entry_dispatch(netmsg_t nmsg);
+int	ip_fw3_ctl_zero_entry(int rulenum, int log_only);
+int	ip_fw3_ctl_add_rule(struct sockopt *sopt);
+void 	*ip_fw3_copy_rule(const struct ip_fw *rule, struct ipfw_ioc_rule *ioc_rule);
+int	ip_fw3_ctl_get_modules(struct sockopt *sopt);
+int	ip_fw3_ctl_get_rules(struct sockopt *sopt);
+void	ip_fw3_set_disable_dispatch(netmsg_t nmsg);
+void	ip_fw3_ctl_set_disable(uint32_t disable, uint32_t enable);
+int	ip_fw3_ctl_x(struct sockopt *sopt);
+int	ip_fw3_ctl(struct sockopt *sopt);
+int	ip_fw3_ctl_sockopt(struct sockopt *sopt);
+int	ip_fw3_check_in(void *arg, struct mbuf **m0, struct ifnet *ifp, int dir);
+int	ip_fw3_check_out(void *arg, struct mbuf **m0, struct ifnet *ifp, int dir);
+void	ip_fw3_hook(void);
+void	ip_fw3_dehook(void);
+void	ip_fw3_sysctl_enable_dispatch(netmsg_t nmsg);
+int	ip_fw3_sysctl_enable(SYSCTL_HANDLER_ARGS);
+int	ip_fw3_sysctl_autoinc_step(SYSCTL_HANDLER_ARGS);
+void	ip_fw3_ctx_init_dispatch(netmsg_t nmsg);
+void	ip_fw3_init_dispatch(netmsg_t nmsg);
+int	ip_fw3_init(void);
+void	ip_fw3_fini_dispatch(netmsg_t nmsg);
+int	ip_fw3_fini(void);
 
 #endif /* _KERNEL */
 #endif /* _IPFW2_H */

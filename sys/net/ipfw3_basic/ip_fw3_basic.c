@@ -100,10 +100,6 @@ extern int 			sysctl_var_icmp_timeout;
 extern int 			sysctl_var_tcp_timeout;
 extern int 			sysctl_var_udp_timeout;
 
-
-static struct ip_fw *lookup_next_rule(struct ip_fw *me);
-static int iface_match(struct ifnet *ifp, ipfw_insn_if *cmd);
-
 static struct ip_fw *
 lookup_next_rule(struct ip_fw *me)
 {
