@@ -448,6 +448,7 @@ ip_fw3_ctl_state_get(struct sockopt *sopt)
 				ioc->src_port = s->src_port;
 				ioc->dst_port = s->dst_port;
 				ioc->cpu_id = cpu;
+				ioc->rule_id = s->stub->rulenum;
 				ioc->proto = IPPROTO_ICMP;
 				ioc->life = s->timestamp +
 					sysctl_var_udp_timeout - time_uptime;
@@ -462,6 +463,7 @@ ip_fw3_ctl_state_get(struct sockopt *sopt)
 				ioc->src_port = s->src_port;
 				ioc->dst_port = s->dst_port;
 				ioc->cpu_id = cpu;
+				ioc->rule_id = s->stub->rulenum;
 				ioc->proto = IPPROTO_ICMP;
 				ioc->life = s->timestamp +
 					sysctl_var_udp_timeout - time_uptime;

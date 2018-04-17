@@ -85,6 +85,7 @@ extern int do_quiet;
 extern int do_force;
 extern int do_dynamic;
 extern int do_acct;
+extern int do_compact;
 
 
 void
@@ -173,7 +174,7 @@ state_list(int ac, char *av[])
 	int count = nbytes / LEN_IOC_FW3_STATE;
 	int i;
 	for (i = 0; i < count; i ++) {
-		printf("%d %d", ioc->rule_id, ioc->cpu_id);
+		printf("%05u %d", ioc->rule_id, ioc->cpu_id);
 		if (ioc->proto == IPPROTO_ICMP) {
 			printf(" icmp");
 		} else if (ioc->proto == IPPROTO_TCP) {

@@ -830,11 +830,21 @@ rule_show(struct ipfw_ioc_rule *rule, int pcwidth, int bcwidth)
 		else
 			printf("# DISABLED ");
 	}
-	printf("%05u ", rule->rulenum);
+	if (do_compact) {
+		printf("%u", rule->rulenum);
+	} else {
+		printf("%05u", rule->rulenum);
+	}
 
-	if (do_acct)
-		printf("%*ju %*ju ", pcwidth, (uintmax_t)rule->pcnt, bcwidth,
-			(uintmax_t)rule->bcnt);
+	if (do_acct) {
+		if (do_compact) {
+			printf(" %ju %ju", (uintmax_t)rule->pcnt,
+						(uintmax_t)rule->bcnt);
+		} else {
+			printf(" %*ju %*ju", pcwidth, (uintmax_t)rule->pcnt,
+				bcwidth, (uintmax_t)rule->bcnt);
+		}
+	}
 
 	if (do_time == 1) {
 		char timestr[30];
@@ -849,16 +859,16 @@ rule_show(struct ipfw_ioc_rule *rule, int pcwidth, int bcwidth)
 
 			strcpy(timestr, ctime(&t));
 			*strchr(timestr, '\n') = '\0';
-			printf("%s ", timestr);
+			printf(" %s", timestr);
 		} else {
-			printf("%*s ", twidth, " ");
+			printf(" %*s", twidth, " ");
 		}
 	} else if (do_time == 2) {
-		printf( "%10u ", rule->timestamp);
+		printf( " %10u", rule->timestamp);
 	}
 
 	if (show_sets)
-		printf("set %d ", rule->set);
+		printf(" set %d", rule->set);
 
 
 	struct ipfw_keyword *k;
@@ -938,10 +948,11 @@ rule_show(struct ipfw_ioc_rule *rule, int pcwidth, int bcwidth)
 	/*
 	 * show other filters
 	 */
-	for (l = rule->act_ofs, cmd = rule->cmd, m = mappings;
-			l > 0; l -= F_LEN(cmd),
-			cmd=(ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd))) {
+	m = mappings;
+	l = rule->act_ofs;
+	for (cmd = rule->cmd; l > 0; l -= F_LEN(cmd)) {
 		show_filter(cmd, "other", FILTER);
+		cmd=(ipfw_insn *)((uint32_t *)cmd + F_LEN(cmd));
 	}
 
 	/* show the comment in the end */
