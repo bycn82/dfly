@@ -148,8 +148,7 @@ typedef void ipfw_basic_append_state_t(struct ipfw3_ioc_state *);
 
 
 void	ip_fw3_basic_add_state(struct ipfw3_ioc_state *ioc_state);
-void	ip_fw3_basic_flush_state_dispatch(netmsg_t nmsg);
-void	ip_fw3_basic_flush_state(struct ip_fw *rule);
+
 
 int	ip_fw3_basic_init(void);
 int	ip_fw3_basic_fini(void);

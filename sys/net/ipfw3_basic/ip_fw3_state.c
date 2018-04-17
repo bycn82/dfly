@@ -213,6 +213,7 @@ check_check_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		(*f)->bcnt += ip_len;
 		(*f)->timestamp = time_second;
 		*f = s->stub;
+		s->timestamp = time_uptime;
 		*cmd_val = IP_FW_PASS;
 		*cmd_ctl = IP_FW_CTL_CHK_STATE;
 		return;
@@ -227,6 +228,7 @@ check_check_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		(*f)->bcnt += ip_len;
 		(*f)->timestamp = time_second;
 		*f = s->stub;
+		s->timestamp = time_uptime;
 		*cmd_val = IP_FW_PASS;
 		*cmd_ctl = IP_FW_CTL_CHK_STATE;
 		return;
@@ -357,6 +359,60 @@ ip_fw3_ctl_state_delete(struct sockopt *sopt)
 	return 0;
 }
 
+void
+ip_fw3_state_flush_dispatch(netmsg_t nmsg)
+{
+	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
+	struct ipfw3_state *s, *tmp;
+
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_icmp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_icmp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_tcp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_tcp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_in, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_in, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	RB_FOREACH_SAFE(s, fw3_state_tree, &state_ctx->rb_udp_out, tmp) {
+		RB_REMOVE(fw3_state_tree, &state_ctx->rb_udp_out, s);
+		if (s != NULL) {
+			kfree(s, M_IPFW3_STATE);
+		}
+	}
+	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
+}
+
+void
+ip_fw3_state_flush(struct ip_fw *rule)
+{
+	struct netmsg_base msg;
+	netmsg_init(&msg, NULL, &curthread->td_msgport, 0,
+			ip_fw3_state_flush_dispatch);
+	netisr_domsg(&msg, 0);
+}
+
 int
 ip_fw3_ctl_state_flush(struct sockopt *sopt)
 {
@@ -425,7 +481,7 @@ nospace:
 void
 ip_fw3_state_cleanup_dispatch(netmsg_t nmsg)
 {
-	/*
+
 	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
 	struct ipfw3_state *s, *tmp;
 
@@ -465,7 +521,6 @@ ip_fw3_state_cleanup_dispatch(netmsg_t nmsg)
 			kfree(s, M_IPFW3_STATE);
 		}
 	}
-	*/
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 
@@ -595,5 +650,19 @@ ip_fw3_state_init(void)
 	netmsg_init(&msg, NULL, &curthread->td_msgport,
 			0, ip_fw3_state_init_dispatch);
 	netisr_domsg(&msg, 0);
+}
+
+
+void
+ipfw3_state_modevent(int type)
+{
+	switch (type) {
+		case MOD_LOAD:
+			ip_fw3_state_init();
+			break;
+		case MOD_UNLOAD:
+			ip_fw3_state_fini();
+			break;
+	}
 }
 

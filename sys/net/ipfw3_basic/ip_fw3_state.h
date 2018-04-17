@@ -92,6 +92,9 @@ void	check_check_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 void	check_keep_state(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 		struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len);
 
+void	ip_fw3_state_flush_dispatch(netmsg_t nmsg);
+void	ip_fw3_state_flush(struct ip_fw *rule);
+
 void	ip_fw3_state_cleanup_dispatch(netmsg_t nmsg);
 void	ip_fw3_state_cleanup(void *dummy __unused);
 void	ip_fw3_state_append_dispatch(netmsg_t nmsg);
@@ -105,5 +108,6 @@ void	ip_fw3_state_init_dispatch(netmsg_t msg);
 void	ip_fw3_state_fini_dispatch(netmsg_t msg);
 void	ip_fw3_state_fini(void);
 void	ip_fw3_state_init(void);
+void	ipfw3_state_modevent(int type);
 #endif	/* _KERNEL */
 #endif
