@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2002-2009 Luigi Rizzo, Universita` di Pisa
  *
- * Copyright (c) 2015 The DragonFly Project.  All rights reserved.
+ * Copyright (c) 2015 - 2018 The DragonFly Project.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
  * by Bill Yuan <bycn82@dragonflybsd.org>
