@@ -340,6 +340,10 @@ lookup_next_rule(struct ip_fw *me)
 static int
 ip_fw3_chk(struct ip_fw_args *args)
 {
+	struct tcphdr *tcp;
+	struct udphdr *udp;
+	struct icmp *icmp;
+
 	struct mbuf *m = args->m;
 	struct ip *ip = mtod(m, struct ip *);
 	struct ip_fw *f = NULL;		/* matching rule */
@@ -408,34 +412,25 @@ do {							\
 	if (offset == 0) {
 		switch (proto) {
 			case IPPROTO_TCP:
-				{
-					struct tcphdr *tcp;
-
-					PULLUP_TO(hlen + sizeof(struct tcphdr));
-					tcp = L3HDR(struct tcphdr, ip);
-					dst_port = tcp->th_dport;
-					src_port = tcp->th_sport;
-					args->f_id.flags = tcp->th_flags;
-				}
+				PULLUP_TO(hlen + sizeof(struct tcphdr));
+				tcp = L3HDR(struct tcphdr, ip);
+				dst_port = tcp->th_dport;
+				src_port = tcp->th_sport;
+				args->f_id.flags = tcp->th_flags;
 				break;
-
 			case IPPROTO_UDP:
-				{
-					struct udphdr *udp;
-
-					PULLUP_TO(hlen + sizeof(struct udphdr));
-					udp = L3HDR(struct udphdr, ip);
-					dst_port = udp->uh_dport;
-					src_port = udp->uh_sport;
-				}
+				PULLUP_TO(hlen + sizeof(struct udphdr));
+				udp = L3HDR(struct udphdr, ip);
+				dst_port = udp->uh_dport;
+				src_port = udp->uh_sport;
 				break;
-
 			case IPPROTO_ICMP:
 				PULLUP_TO(hlen + 4);
-				args->f_id.flags =
-					L3HDR(struct icmp, ip)->icmp_type;
+				icmp = L3HDR(struct icmp, ip);
+  				args->f_id.flags = icmp->icmp_type;
+				dst_port = icmp->icmp_id;
+				src_port = dst_port;
 				break;
-
 			default:
 				break;
 		}
@@ -1233,6 +1228,7 @@ ip_fw3_zero_entry_dispatch(netmsg_t nmsg)
 			}
 		}
 	}
+	clear_counters(ctx->ipfw_default_rule);
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 

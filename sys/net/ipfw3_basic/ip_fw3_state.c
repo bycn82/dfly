@@ -444,9 +444,9 @@ ip_fw3_ctl_state_get(struct sockopt *sopt)
 				if (total_len > sopt_size)
 					goto nospace;
 				ioc->src_addr.s_addr = ntohl(s->src_addr);
-				ioc->dst_addr.s_addr = s->dst_addr;
-				ioc->src_port = s->src_port;
-				ioc->dst_port = s->dst_port;
+				ioc->dst_addr.s_addr = ntohl(s->dst_addr);
+				ioc->src_port = ntohs(s->src_port);
+				ioc->dst_port = ntohs(s->dst_port);
 				ioc->cpu_id = cpu;
 				ioc->rule_id = s->stub->rulenum;
 				ioc->proto = IPPROTO_ICMP;
@@ -459,12 +459,72 @@ ip_fw3_ctl_state_get(struct sockopt *sopt)
 				if (total_len > sopt_size)
 					goto nospace;
 				ioc->src_addr.s_addr = ntohl(s->src_addr);
-				ioc->dst_addr.s_addr = s->dst_addr;
-				ioc->src_port = s->src_port;
-				ioc->dst_port = s->dst_port;
+				ioc->dst_addr.s_addr = ntohl(s->dst_addr);
+				ioc->src_port = ntohs(s->src_port);
+				ioc->dst_port = ntohs(s->dst_port);
 				ioc->cpu_id = cpu;
 				ioc->rule_id = s->stub->rulenum;
 				ioc->proto = IPPROTO_ICMP;
+				ioc->life = s->timestamp +
+					sysctl_var_udp_timeout - time_uptime;
+				ioc++;
+		}
+		RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_tcp_in) {
+				total_len += LEN_IOC_FW3_STATE;
+				if (total_len > sopt_size)
+					goto nospace;
+				ioc->src_addr.s_addr = ntohl(s->src_addr);
+				ioc->dst_addr.s_addr = ntohl(s->dst_addr);
+				ioc->src_port = ntohs(s->src_port);
+				ioc->dst_port = ntohs(s->dst_port);
+				ioc->cpu_id = cpu;
+				ioc->rule_id = s->stub->rulenum;
+				ioc->proto = IPPROTO_TCP;
+				ioc->life = s->timestamp +
+					sysctl_var_udp_timeout - time_uptime;
+				ioc++;
+		}
+		RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_tcp_out) {
+				total_len += LEN_IOC_FW3_STATE;
+				if (total_len > sopt_size)
+					goto nospace;
+				ioc->src_addr.s_addr = ntohl(s->src_addr);
+				ioc->dst_addr.s_addr = ntohl(s->dst_addr);
+				ioc->src_port = ntohs(s->src_port);
+				ioc->dst_port = ntohs(s->dst_port);
+				ioc->cpu_id = cpu;
+				ioc->rule_id = s->stub->rulenum;
+				ioc->proto = IPPROTO_TCP;
+				ioc->life = s->timestamp +
+					sysctl_var_udp_timeout - time_uptime;
+				ioc++;
+		}
+		RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_udp_in) {
+				total_len += LEN_IOC_FW3_STATE;
+				if (total_len > sopt_size)
+					goto nospace;
+				ioc->src_addr.s_addr = ntohl(s->src_addr);
+				ioc->dst_addr.s_addr = ntohl(s->dst_addr);
+				ioc->src_port = ntohs(s->src_port);
+				ioc->dst_port = ntohs(s->dst_port);
+				ioc->cpu_id = cpu;
+				ioc->rule_id = s->stub->rulenum;
+				ioc->proto = IPPROTO_UDP;
+				ioc->life = s->timestamp +
+					sysctl_var_udp_timeout - time_uptime;
+				ioc++;
+		}
+		RB_FOREACH(s, fw3_state_tree, &state_ctx->rb_udp_out) {
+				total_len += LEN_IOC_FW3_STATE;
+				if (total_len > sopt_size)
+					goto nospace;
+				ioc->src_addr.s_addr = ntohl(s->src_addr);
+				ioc->dst_addr.s_addr = ntohl(s->dst_addr);
+				ioc->src_port = ntohs(s->src_port);
+				ioc->dst_port = ntohs(s->dst_port);
+				ioc->cpu_id = cpu;
+				ioc->rule_id = s->stub->rulenum;
+				ioc->proto = IPPROTO_UDP;
 				ioc->life = s->timestamp +
 					sysctl_var_udp_timeout - time_uptime;
 				ioc++;
@@ -576,7 +636,6 @@ ip_fw3_state_init_dispatch(netmsg_t msg)
 void
 ip_fw3_state_fini_dispatch(netmsg_t msg)
 {
-	/*
 	struct ipfw3_state_context *state_ctx = fw3_state_ctx[mycpuid];
 	struct ipfw3_state *s, *tmp;
 
@@ -616,7 +675,6 @@ ip_fw3_state_fini_dispatch(netmsg_t msg)
 			kfree(s, M_IPFW3_STATE);
 		}
 	}
-	*/
 	kfree(fw3_state_ctx[mycpuid], M_IPFW3_STATE);
 	fw3_state_ctx[mycpuid] = NULL;
 	netisr_forwardmsg_all(&msg->base, mycpuid + 1);
