@@ -344,8 +344,6 @@ struct ipfw_ioc_rule {
 
 	/* Rule set information */
 	uint32_t	set_disable;	/* disabled rule sets		*/
-	uint32_t	static_count;	/* # of static rules		*/
-	uint32_t	static_len;	/* total length of static rules	*/
 
 	/* Statistics */
 	uint64_t	pcnt;		/* Packet counter		*/
@@ -529,8 +527,6 @@ void	init_module(void);
 int	ip_fw3_free_rule(struct ip_fw *rule);
 int	ip_fw3_chk(struct ip_fw_args *args);
 struct mbuf *ip_fw3_dummynet_io(struct mbuf *m, int pipe_nr, int dir, struct ip_fw_args *fwa);
-void	ip_fw3_inc_static_count(struct ip_fw *rule);
-void	ip_fw3_dec_static_count(struct ip_fw *rule);
 void	ip_fw3_add_rule_dispatch(netmsg_t nmsg);
 void	ip_fw3_add_rule(struct ipfw_ioc_rule *ioc_rule);
 struct ip_fw *ip_fw3_delete_rule(struct ipfw3_context *ctx,

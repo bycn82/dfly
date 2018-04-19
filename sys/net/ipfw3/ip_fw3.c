@@ -137,8 +137,6 @@ extern struct ipfw3_state_context 	*fw3_state_ctx[MAXCPU];
 int 			sysctl_var_fw3_enable = 1;
 int 			sysctl_var_fw3_one_pass = 1;
 int 			sysctl_var_fw3_verbose = 0;
-static uint32_t 	static_count;	/* # of static rules */
-static uint32_t 	static_ioc_len;	/* bytes of static rules */
 static int 		sysctl_var_fw3_flushing;
 static int 		sysctl_var_fw3_debug;
 static int 		sysctl_var_autoinc_step = IPFW_AUTOINC_STEP_DEF;
@@ -156,8 +154,6 @@ SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, debug, CTLFLAG_RW,
 	&sysctl_var_fw3_debug, 0, "Enable printing of debug ip_fw statements");
 SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, verbose, CTLFLAG_RW,
 	&sysctl_var_fw3_verbose, 0, "Log matches to ipfw rules");
-SYSCTL_INT(_net_inet_ip_fw3, OID_AUTO, static_count, CTLFLAG_RD,
-	&static_count, 0, "Number of static rules");
 
 filter_func 			filter_funcs[MAX_MODULE][MAX_OPCODE_PER_MODULE];
 struct ipfw3_module 		fw3_modules[MAX_MODULE];
@@ -640,31 +636,6 @@ ip_fw3_dummynet_io(struct mbuf *m, int pipe_nr, int dir, struct ip_fw_args *fwa)
 	return (m);
 }
 
-void
-ip_fw3_inc_static_count(struct ip_fw *rule)
-{
-	/* Static rule's counts are updated only on CPU0 */
-	KKASSERT(mycpuid == 0);
-
-	static_count++;
-	static_ioc_len += IOC_RULESIZE(rule);
-}
-
-void
-ip_fw3_dec_static_count(struct ip_fw *rule)
-{
-	int l = IOC_RULESIZE(rule);
-
-	/* Static rule's counts are updated only on CPU0 */
-	KKASSERT(mycpuid == 0);
-
-	KASSERT(static_count > 0, ("invalid static count %u", static_count));
-	static_count--;
-
-	KASSERT(static_ioc_len >= l,
-			("invalid static len %u", static_ioc_len));
-	static_ioc_len -= l;
-}
 
 void
 ip_fw3_add_rule_dispatch(netmsg_t nmsg)
@@ -712,10 +683,6 @@ ip_fw3_add_rule_dispatch(netmsg_t nmsg)
 	/* prepare for next CPU */
 	fwmsg->sibling = rule;
 
-	if (mycpuid == 0) {
-		/* Statistics only need to be updated once */
-		ip_fw3_inc_static_count(rule);
-	}
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 
@@ -789,9 +756,6 @@ ip_fw3_delete_rule(struct ipfw3_context *ctx,
 	else
 		prev->next = rule->next;
 
-	if (mycpuid == IPFW_CFGCPUID)
-		ip_fw3_dec_static_count(rule);
-
 	kfree(rule, M_IPFW3);
 	rule = NULL;
 	return NULL;
@@ -813,8 +777,6 @@ ip_fw3_flush_rule_dispatch(netmsg_t nmsg)
 		}
 		the_rule = rule;
 		rule = rule->next;
-		if (mycpuid == IPFW_CFGCPUID)
-			ip_fw3_dec_static_count(the_rule);
 
 		kfree(the_rule, M_IPFW3);
 	}
@@ -859,13 +821,6 @@ ip_fw3_ctl_flush_rule(int kill_default)
 	lmsg = &nmsg.lmsg;
 	lmsg->u.ms_result = kill_default;
 	netisr_domsg(&nmsg, 0);
-
-	if (kill_default) {
-		KASSERT(static_count == 0,
-				("%u static rules remain", static_count));
-		KASSERT(static_ioc_len == 0,
-				("%u bytes of static rules remain", static_ioc_len));
-	}
 
 	/* Flush is done */
 	sysctl_var_fw3_flushing = 0;
@@ -1296,8 +1251,6 @@ ip_fw3_copy_rule(const struct ip_fw *rule, struct ipfw_ioc_rule *ioc_rule)
 	ioc_rule->set = rule->set;
 
 	ioc_rule->set_disable = fw3_ctx[mycpuid]->ipfw_set_disable;
-	ioc_rule->static_count = static_count;
-	ioc_rule->static_len = static_ioc_len;
 
 	ioc_rule->pcnt = 1;
 	ioc_rule->bcnt = 0;
@@ -1355,23 +1308,20 @@ ip_fw3_ctl_get_rules(struct sockopt *sopt)
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *rule;
 	void *bp;
-	size_t size;
+	int total_len = 0;
 
 
-	size = static_ioc_len;
-
-	if (sopt->sopt_valsize < size) {
-		/* XXX TODO sopt_val is not big enough */
-		bzero(sopt->sopt_val, sopt->sopt_valsize);
-		return 0;
-	}
-
-	sopt->sopt_valsize = size;
 	bp = sopt->sopt_val;
 
 	for (rule = ctx->ipfw_rule_chain; rule; rule = rule->next) {
+		total_len += IOC_RULESIZE(rule);
+		if (total_len > sopt->sopt_valsize) {
+			bzero(sopt->sopt_val, sopt->sopt_valsize);
+			return 0;
+		}
 		bp = ip_fw3_copy_rule(rule, bp);
 	}
+	sopt->sopt_valsize = total_len;
 	return 0;
 }
 
@@ -1840,10 +1790,6 @@ ip_fw3_ctx_init_dispatch(netmsg_t nmsg)
 	}
 	/* prepare for next CPU */
 	fwmsg->sibling = def_rule;
-
-	/* Statistics only need to be updated once */
-	if (mycpuid == 0)
-		ip_fw3_inc_static_count(def_rule);
 
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }

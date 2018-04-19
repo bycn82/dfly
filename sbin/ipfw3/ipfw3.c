@@ -731,9 +731,10 @@ rule_list(int ac, char *av[])
 	struct ipfw_ioc_rule *rule;
 
 	void *data = NULL;
-	int bcwidth, n, nbytes, nstat, pcwidth, width;
+	int bcwidth, nbytes, pcwidth, width;
 	int nalloc = 1024;
 	int the_rule_num = 0;
+	int total_len;
 
 	NEXT_ARG;
 
@@ -753,12 +754,10 @@ rule_list(int ac, char *av[])
 	 * Count static rules.
 	 */
 	rule = data;
-	nstat = rule->static_count;
-printf("nbytes %d count %d \n",nbytes, nstat);
 	bcwidth = pcwidth = 0;
 	if (do_acct) {
-		for (n = 0, rule = data; n < nstat;
-			n++, rule = (void *)rule + IOC_RULESIZE(rule)) {
+		total_len = 0;
+		for (rule = data; rule != NULL; rule = (void *)rule + IOC_RULESIZE(rule)) {
 			/* packet counter */
 			width = snprintf(NULL, 0, "%ju", (uintmax_t)rule->pcnt);
 			if (width > pcwidth)
@@ -768,6 +767,11 @@ printf("nbytes %d count %d \n",nbytes, nstat);
 			width = snprintf(NULL, 0, "%ju", (uintmax_t)rule->bcnt);
 			if (width > bcwidth)
 				bcwidth = width;
+
+			total_len += IOC_RULESIZE(rule);
+			if (total_len == nbytes) {
+				break;
+			}
 		}
 	}
 
@@ -776,21 +780,15 @@ printf("nbytes %d count %d \n",nbytes, nstat);
 		the_rule_num = atoi(*av);
 	}
 
-	for (n = 0, rule = data; n < nstat; n++, rule = (void *)rule + IOC_RULESIZE(rule)) {
-		if(the_rule_num == 0 || rule->rulenum == the_rule_num) {
-			rule_show(rule, pcwidth, bcwidth);
-		}
-	}
-
-	int total_len = 0;
-	n = 0;
-	for (rule = data; rule != NULL && n < 6; n++) {
+	total_len = 0;
+	for (rule = data; rule != NULL; rule = (void *)rule + IOC_RULESIZE(rule)) {
 		if(the_rule_num == 0 || rule->rulenum == the_rule_num) {
 			rule_show(rule, pcwidth, bcwidth);
 		}
 		total_len += IOC_RULESIZE(rule);
-		printf("n = %d nbytes %d total %d\n", n, nbytes, total_len);
-		rule = (void *)rule + IOC_RULESIZE(rule);
+		if (total_len == nbytes) {
+			break;
+		}
 	}
 
 }
