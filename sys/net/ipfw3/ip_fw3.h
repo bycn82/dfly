@@ -424,6 +424,8 @@ typedef struct _ip_fw_x_header {
 
 #include <net/netisr2.h>
 
+int     ip_fw3_sockopt(struct sockopt *);
+
 extern int ip_fw3_loaded;
 
 #define	IPFW3_LOADED	(ip_fw3_loaded)
@@ -549,7 +551,6 @@ void	clear_counters(struct ip_fw *rule);
 void	ip_fw3_zero_entry_dispatch(netmsg_t nmsg);
 int	ip_fw3_ctl_zero_entry(int rulenum, int log_only);
 int	ip_fw3_ctl_add_rule(struct sockopt *sopt);
-void 	*ip_fw3_copy_rule(const struct ip_fw *rule, struct ipfw_ioc_rule *ioc_rule);
 int	ip_fw3_ctl_get_modules(struct sockopt *sopt);
 int	ip_fw3_ctl_get_rules(struct sockopt *sopt);
 void	ip_fw3_set_disable_dispatch(netmsg_t nmsg);
@@ -562,8 +563,6 @@ int	ip_fw3_check_out(void *arg, struct mbuf **m0, struct ifnet *ifp, int dir);
 void	ip_fw3_hook(void);
 void	ip_fw3_dehook(void);
 void	ip_fw3_sysctl_enable_dispatch(netmsg_t nmsg);
-int	ip_fw3_sysctl_enable(SYSCTL_HANDLER_ARGS);
-int	ip_fw3_sysctl_autoinc_step(SYSCTL_HANDLER_ARGS);
 void	ip_fw3_ctx_init_dispatch(netmsg_t nmsg);
 void	ip_fw3_init_dispatch(netmsg_t nmsg);
 int	ip_fw3_init(void);

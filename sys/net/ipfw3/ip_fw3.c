@@ -141,6 +141,9 @@ static int 		sysctl_var_fw3_flushing;
 static int 		sysctl_var_fw3_debug;
 static int 		sysctl_var_autoinc_step = IPFW_AUTOINC_STEP_DEF;
 
+int	ip_fw3_sysctl_enable(SYSCTL_HANDLER_ARGS);
+int	ip_fw3_sysctl_autoinc_step(SYSCTL_HANDLER_ARGS);
+
 SYSCTL_NODE(_net_inet_ip, OID_AUTO, fw3, CTLFLAG_RW, 0, "Firewall");
 SYSCTL_PROC(_net_inet_ip_fw3, OID_AUTO, enable, CTLTYPE_INT | CTLFLAG_RW,
 	&sysctl_var_fw3_enable, 0, ip_fw3_sysctl_enable, "I", "Enable ipfw");
@@ -159,6 +162,8 @@ filter_func 			filter_funcs[MAX_MODULE][MAX_OPCODE_PER_MODULE];
 struct ipfw3_module 		fw3_modules[MAX_MODULE];
 struct ipfw3_context 		*fw3_ctx[MAXCPU];
 struct ipfw3_sync_context 	fw3_sync_ctx;
+
+
 
 
 void
@@ -1237,48 +1242,6 @@ ip_fw3_ctl_add_rule(struct sockopt *sopt)
 	return 0;
 }
 
-void *
-ip_fw3_copy_rule(const struct ip_fw *rule, struct ipfw_ioc_rule *ioc_rule)
-{
-	const struct ip_fw *sibling;
-#ifdef INVARIANTS
-	int i;
-#endif
-
-	ioc_rule->act_ofs = rule->act_ofs;
-	ioc_rule->cmd_len = rule->cmd_len;
-	ioc_rule->rulenum = rule->rulenum;
-	ioc_rule->set = rule->set;
-
-	ioc_rule->set_disable = fw3_ctx[mycpuid]->ipfw_set_disable;
-
-	ioc_rule->pcnt = 1;
-	ioc_rule->bcnt = 0;
-	ioc_rule->timestamp = 0;
-
-#ifdef INVARIANTS
-	i = 0;
-#endif
-	ioc_rule->pcnt = 0;
-	ioc_rule->bcnt = 0;
-	ioc_rule->timestamp = 0;
-	for (sibling = rule; sibling != NULL; sibling = sibling->sibling) {
-		ioc_rule->pcnt += sibling->pcnt;
-		ioc_rule->bcnt += sibling->bcnt;
-		if (sibling->timestamp > ioc_rule->timestamp)
-			ioc_rule->timestamp = sibling->timestamp;
-#ifdef INVARIANTS
-		++i;
-#endif
-	}
-
-	KASSERT(i == ncpus, ("static rule is not duplicated on every cpu"));
-
-	bcopy(rule->cmd, ioc_rule->cmd, ioc_rule->cmd_len * 4 /* XXX */);
-
-	return ((uint8_t *)ioc_rule + IOC_RULESIZE(ioc_rule));
-}
-
 int
 ip_fw3_ctl_get_modules(struct sockopt *sopt)
 {
@@ -1307,19 +1270,40 @@ ip_fw3_ctl_get_rules(struct sockopt *sopt)
 {
 	struct ipfw3_context *ctx = fw3_ctx[mycpuid];
 	struct ip_fw *rule;
-	void *bp;
+	struct ipfw_ioc_rule *ioc;
+	const struct ip_fw *sibling;
 	int total_len = 0;
 
-
-	bp = sopt->sopt_val;
+	ioc = (struct ipfw_ioc_rule *)sopt->sopt_val;
 
 	for (rule = ctx->ipfw_rule_chain; rule; rule = rule->next) {
+kprintf("CPU %d ", mycpuid);
 		total_len += IOC_RULESIZE(rule);
 		if (total_len > sopt->sopt_valsize) {
 			bzero(sopt->sopt_val, sopt->sopt_valsize);
 			return 0;
 		}
-		bp = ip_fw3_copy_rule(rule, bp);
+		ioc->act_ofs = rule->act_ofs;
+		ioc->cmd_len = rule->cmd_len;
+		ioc->rulenum = rule->rulenum;
+		ioc->set = rule->set;
+
+		ioc->set_disable = fw3_ctx[mycpuid]->ipfw_set_disable;
+		ioc->pcnt = 0;
+		ioc->bcnt = 0;
+		ioc->timestamp = 0;
+		for (sibling = rule; sibling != NULL; sibling = sibling->sibling) {
+kprintf("sibling ");
+			ioc->pcnt += sibling->pcnt;
+			ioc->bcnt += sibling->bcnt;
+			if (sibling->timestamp > ioc->timestamp)
+				ioc->timestamp = sibling->timestamp;
+		}
+kprintf("\n");
+		bcopy(rule->cmd, ioc->cmd, ioc->cmd_len * 4);
+
+		ioc = (struct ipfw_ioc_rule *)((uint8_t *)ioc + IOC_RULESIZE(ioc));
+
 	}
 	sopt->sopt_valsize = total_len;
 	return 0;
