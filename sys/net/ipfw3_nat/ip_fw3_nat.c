@@ -166,7 +166,7 @@ int
 ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 {
 	struct state_tree *tree_out = NULL;
-	struct nat_state *s, *dup, *k, key;
+	struct nat_state *s = NULL, *dup, *k, key;
 	struct nat_state2 *s2 = NULL;
 	struct ip *ip = mtod(m, struct ip *);
 	struct in_addr *old_addr = NULL, new_addr;
@@ -190,12 +190,12 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 		switch (ip->ip_p) {
 		case IPPROTO_TCP:
 			old_port = &L3HDR(struct tcphdr, ip)->th_dport;
-			s2 = alias->tcp_in[*old_port];
+			s2 = alias->tcp_in[*old_port - ALIAS_BEGIN];
 			csum = &L3HDR(struct tcphdr, ip)->th_sum;
 			break;
 		case IPPROTO_UDP:
 			old_port = &L3HDR(struct udphdr, ip)->uh_dport;
-			s2 = alias->udp_in[*old_port];
+			s2 = alias->udp_in[*old_port - ALIAS_BEGIN];
 			csum = &L3HDR(struct udphdr, ip)->uh_sum;
 			udp = 1;
 			break;
@@ -302,8 +302,14 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 				s2 = kmalloc(LEN_NAT_STATE2, M_IPFW3_NAT,
 						M_INTWAIT | M_NULLOK | M_ZERO);
 
-				s2->src_addr = htonl(args->f_id.src_ip);
-				s2->src_port = *old_port;
+				s2->src_addr = args->f_id.dst_ip;
+				s2->dst_addr = alias->ip.s_addr;
+
+				s2->src_port = s->alias_port;
+				s2->dst_port = s->alias_port;
+
+				s2->alias_addr = htonl(args->f_id.src_ip);
+				s2->alias_port = *old_port;
 
 				alias->icmp_in[s->alias_port] = s2;
 				break;
@@ -372,6 +378,12 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 			s2 = kmalloc(LEN_NAT_STATE2, M_IPFW3_NAT,
 					M_INTWAIT | M_NULLOK | M_ZERO);
 
+			s2->src_addr = args->f_id.dst_ip;
+			s2->src_port = args->f_id.dst_port;
+
+			s2->dst_addr = alias->ip.s_addr;
+			s2->dst_port = s->alias_port;
+
 			s2->src_addr = htonl(args->f_id.src_ip);
 			s2->src_port = htons(args->f_id.src_port);
 
@@ -386,14 +398,20 @@ ip_fw3_nat(struct ip_fw_args *args, struct cfg_nat *nat, struct mbuf *m)
 			s2 = kmalloc(LEN_NAT_STATE2, M_IPFW3_NAT,
 					M_INTWAIT | M_NULLOK | M_ZERO);
 
+			s2->src_addr = args->f_id.dst_ip;
+			s2->dst_addr = alias->ip.s_addr;
+
+			s2->src_port = s->alias_port;
+			s2->dst_port = s->alias_port;
+
 			s2->src_addr = htonl(args->f_id.src_ip);
 			s2->src_port = htons(args->f_id.src_port);
 
 			s2->timestamp = s->timestamp;
 			if (ip->ip_p == IPPROTO_TCP) {
-				alias->tcp_in[s->alias_port] = s2;
+				alias->tcp_in[s->alias_port - ALIAS_BEGIN] = s2;
 			} else {
-				alias->udp_in[s->alias_port] = s2;
+				alias->udp_in[s->alias_port - ALIAS_BEGIN] = s2;
 			}
 		}
 	}
@@ -488,8 +506,10 @@ ip_fw3_ctl_nat_get_record(struct sockopt *sopt)
 	struct cfg_nat *the;
 	size_t sopt_size, total_len = 0;
 	struct ioc_nat_state *ioc;
-	int ioc_nat_id, n, cpu;
-	struct nat_state *s;
+	int ioc_nat_id, i, n, cpu;
+	struct nat_state 	*s;
+	struct nat_state2 	*s2;
+	struct cfg_alias	*a1;
 
 	ioc_nat_id = *((int *)(sopt->sopt_val));
 	sopt_size = sopt->sopt_valsize;
@@ -520,23 +540,32 @@ ip_fw3_ctl_nat_get_record(struct sockopt *sopt)
 					sysctl_var_icmp_timeout - time_uptime;
 				ioc++;
 			}
-			RB_FOREACH(s, state_tree, &the->rb_icmp_in) {
-				total_len += LEN_IOC_NAT_STATE;
-				if (total_len > sopt_size)
-					goto nospace;
-				ioc->src_addr.s_addr = ntohl(s->src_addr);
-				ioc->dst_addr.s_addr = s->dst_addr;
-				ioc->alias_addr.s_addr = s->alias_addr;
-				ioc->src_port = s->src_port;
-				ioc->dst_port = s->dst_port;
-				ioc->alias_port = s->alias_port;
-				ioc->nat_id = n + 1;
-				ioc->cpu_id = cpu;
-				ioc->proto = IPPROTO_ICMP;
-				ioc->direction = 0;
-				ioc->life = s->timestamp +
-					sysctl_var_icmp_timeout - time_uptime;
-				ioc++;
+
+			LIST_FOREACH(a1, &the->alias, next) {
+				for (i = 0; i < ALIAS_RANGE; i++) {
+					s2 = a1->icmp_in[i];
+					if (s2 == NULL) {
+						continue;
+					}
+
+					total_len += LEN_IOC_NAT_STATE;
+					if (total_len > sopt_size)
+						goto nospace;
+
+					ioc->src_addr.s_addr = ntohl(s2->src_addr);
+					ioc->dst_addr.s_addr = s2->dst_addr;
+					ioc->alias_addr.s_addr = s2->alias_addr;
+					ioc->src_port = s2->src_port;
+					ioc->dst_port = s2->dst_port;
+					ioc->alias_port = s2->alias_port;
+					ioc->nat_id = n + 1;
+					ioc->cpu_id = cpu;
+					ioc->proto = IPPROTO_ICMP;
+					ioc->direction = 0;
+					ioc->life = s2->timestamp +
+						sysctl_var_icmp_timeout - time_uptime;
+					ioc++;
+				}
 			}
 		}
 	}
@@ -567,23 +596,31 @@ ip_fw3_ctl_nat_get_record(struct sockopt *sopt)
 						sysctl_var_tcp_timeout - time_uptime;
 					ioc++;
 				}
-				RB_FOREACH(s, state_tree, &the->rb_tcp_in) {
-					total_len += LEN_IOC_NAT_STATE;
-					if (total_len > sopt_size)
-						goto nospace;
-					ioc->src_addr.s_addr = ntohl(s->src_addr);
-					ioc->dst_addr.s_addr = s->dst_addr;
-					ioc->alias_addr.s_addr = s->alias_addr;
-					ioc->src_port = ntohs(s->src_port);
-					ioc->dst_port = s->dst_port;
-					ioc->alias_port = s->alias_port;
-					ioc->nat_id = n + 1;
-					ioc->cpu_id = cpu;
-					ioc->proto = IPPROTO_TCP;
-					ioc->direction = 0;
-					ioc->life = s->timestamp +
-						sysctl_var_tcp_timeout - time_uptime;
-					ioc++;
+				LIST_FOREACH(a1, &the->alias, next) {
+					for (i = 0; i < ALIAS_RANGE; i++) {
+						s2 = a1->tcp_in[i];
+						if (s2 == NULL) {
+							continue;
+						}
+
+						total_len += LEN_IOC_NAT_STATE;
+						if (total_len > sopt_size)
+							goto nospace;
+
+						ioc->src_addr.s_addr = ntohl(s2->src_addr);
+						ioc->dst_addr.s_addr = s2->dst_addr;
+						ioc->alias_addr.s_addr = s2->alias_addr;
+						ioc->src_port = s2->src_port;
+						ioc->dst_port = s2->dst_port;
+						ioc->alias_port = s2->alias_port;
+						ioc->nat_id = n + 1;
+						ioc->cpu_id = cpu;
+						ioc->proto = IPPROTO_TCP;
+						ioc->direction = 0;
+						ioc->life = s2->timestamp +
+							sysctl_var_icmp_timeout - time_uptime;
+						ioc++;
+					}
 				}
 			}
 		}
@@ -615,23 +652,31 @@ ip_fw3_ctl_nat_get_record(struct sockopt *sopt)
 						sysctl_var_udp_timeout - time_uptime;
 					ioc++;
 				}
-				RB_FOREACH(s, state_tree, &the->rb_udp_in) {
-					total_len += LEN_IOC_NAT_STATE;
-					if (total_len > sopt_size)
-						goto nospace;
-					ioc->src_addr.s_addr = ntohl(s->src_addr);
-					ioc->dst_addr.s_addr = s->dst_addr;
-					ioc->alias_addr.s_addr = s->alias_addr;
-					ioc->src_port = s->src_port;
-					ioc->dst_port = s->dst_port;
-					ioc->alias_port = s->alias_port;
-					ioc->nat_id = n + 1;
-					ioc->cpu_id = cpu;
-					ioc->proto = IPPROTO_UDP;
-					ioc->direction = 0;
-					ioc->life = s->timestamp +
-						sysctl_var_udp_timeout - time_uptime;
-					ioc++;
+				LIST_FOREACH(a1, &the->alias, next) {
+					for (i = 0; i < ALIAS_RANGE; i++) {
+						s2 = a1->udp_in[i];
+						if (s2 == NULL) {
+							continue;
+						}
+
+						total_len += LEN_IOC_NAT_STATE;
+						if (total_len > sopt_size)
+							goto nospace;
+
+						ioc->src_addr.s_addr = ntohl(s2->src_addr);
+						ioc->dst_addr.s_addr = s2->dst_addr;
+						ioc->alias_addr.s_addr = s2->alias_addr;
+						ioc->src_port = s2->src_port;
+						ioc->dst_port = s2->dst_port;
+						ioc->alias_port = s2->alias_port;
+						ioc->nat_id = n + 1;
+						ioc->cpu_id = cpu;
+						ioc->proto = IPPROTO_UDP;
+						ioc->direction = 0;
+						ioc->life = s2->timestamp +
+							sysctl_var_icmp_timeout - time_uptime;
+						ioc++;
+					}
 				}
 			}
 		}
@@ -690,12 +735,9 @@ nat_add_dispatch(netmsg_t nat_add_msg)
 		/* op = set, and nat not exists */
 		nat = kmalloc(LEN_CFG_NAT, M_IPFW3_NAT, M_WAITOK | M_ZERO);
 		LIST_INIT(&nat->alias);
-		RB_INIT(&nat->rb_tcp_in);
 		RB_INIT(&nat->rb_tcp_out);
-		RB_INIT(&nat->rb_udp_in);
 		RB_INIT(&nat->rb_udp_out);
 		if (mycpuid == 0) {
-			RB_INIT(&nat->rb_icmp_in);
 			RB_INIT(&nat->rb_icmp_out);
 		}
 		nat->id = ioc->id;
@@ -736,7 +778,7 @@ nat_del_dispatch(netmsg_t nat_del_msg)
 	struct netmsg_nat_del *msg;
 	struct cfg_nat *nat;
 	struct nat_state *s, *tmp;
-	struct cfg_alias *alias, *tmp2;
+	struct cfg_alias *alias, *tmp3;
 
 	msg = (struct netmsg_nat_del *)nat_del_msg;
 
@@ -744,43 +786,50 @@ nat_del_dispatch(netmsg_t nat_del_msg)
 	nat = nat_ctx->nats[msg->id - 1];
 	if (nat != NULL) {
 		/* the icmp states will only stored in cpu 0 */
-		RB_FOREACH_SAFE(s, state_tree, &nat->rb_icmp_in, tmp) {
-			RB_REMOVE(state_tree, &nat->rb_icmp_in, s);
-			if (s != NULL) {
-				kfree(s, M_IPFW3_NAT);
-			}
-		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_icmp_out, tmp) {
 			RB_REMOVE(state_tree, &nat->rb_icmp_out, s);
 			if (s != NULL) {
 				kfree(s, M_IPFW3_NAT);
 			}
 		}
-		RB_FOREACH_SAFE(s, state_tree, &nat->rb_tcp_in, tmp) {
-			RB_REMOVE(state_tree, &nat->rb_tcp_in, s);
+		/*
+		LIST_FOREACH_MUTABLE(s2, &nat->alias->icmp_in, next, tmp2) {
+			LIST_REMOVE(s2, next);
 			if (s != NULL) {
 				kfree(s, M_IPFW3_NAT);
 			}
 		}
+		*/
+
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_tcp_out, tmp) {
 			RB_REMOVE(state_tree, &nat->rb_tcp_out, s);
 			if (s != NULL) {
 				kfree(s, M_IPFW3_NAT);
 			}
 		}
-		RB_FOREACH_SAFE(s, state_tree, &nat->rb_udp_in, tmp) {
-			RB_REMOVE(state_tree, &nat->rb_udp_in, s);
+		/*
+		LIST_FOREACH_MUTABLE(s2, &nat->alias->tcp_in, next, tmp2) {
+			LIST_REMOVE(s2, next);
 			if (s != NULL) {
 				kfree(s, M_IPFW3_NAT);
 			}
 		}
+		*/
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_udp_out, tmp) {
-			RB_REMOVE(state_tree, &nat->rb_icmp_in, s);
+			RB_REMOVE(state_tree, &nat->rb_udp_out, s);
 			if (s != NULL) {
 				kfree(s, M_IPFW3_NAT);
 			}
 		}
-		LIST_FOREACH_MUTABLE(alias, &nat->alias, next, tmp2) {
+		/*
+		LIST_FOREACH_MUTABLE(s2, &nat->alias->udp_in, next, tmp2) {
+			LIST_REMOVE(s2, next);
+			if (s != NULL) {
+				kfree(s, M_IPFW3_NAT);
+			}
+		}
+		*/
+		LIST_FOREACH_MUTABLE(alias, &nat->alias, next, tmp3) {
 			kfree(alias, M_IPFW3_NAT);
 		}
 		kfree(nat, M_IPFW3_NAT);
@@ -868,49 +917,70 @@ ip_fw3_nat_cleanup_func_dispatch(netmsg_t nmsg)
 	struct nat_state *s, *tmp;
 	struct ip_fw3_nat_context *nat_ctx;
 	struct cfg_nat *nat;
-	int i;
+	struct cfg_alias *a1, *tmp2;
+	struct nat_state2 *s2;
+	int i, j;
 
 	nat_ctx = ip_fw3_nat_ctx[mycpuid];
-	for (i = 0; i < NAT_ID_MAX; i++) {
-		nat = nat_ctx->nats[i];
+	for (j = 0; j < NAT_ID_MAX; j++) {
+		nat = nat_ctx->nats[j];
 		if (nat == NULL)
 			continue;
 		/* check the nat_states, remove the expired state */
 		/* the icmp states will only stored in cpu 0 */
-		RB_FOREACH_SAFE(s, state_tree, &nat->rb_icmp_in, tmp) {
-			if (time_uptime - s->timestamp > sysctl_var_icmp_timeout) {
-				RB_REMOVE(state_tree, &nat->rb_icmp_in, s);
-				kfree(s, M_IPFW3_NAT);
-			}
-		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_icmp_out, tmp) {
 			if (time_uptime - s->timestamp > sysctl_var_icmp_timeout) {
 				RB_REMOVE(state_tree, &nat->rb_icmp_out, s);
 				kfree(s, M_IPFW3_NAT);
 			}
 		}
-		RB_FOREACH_SAFE(s, state_tree, &nat->rb_tcp_in, tmp) {
-			if (time_uptime - s->timestamp > sysctl_var_tcp_timeout) {
-				RB_REMOVE(state_tree, &nat->rb_tcp_in, s);
-				kfree(s, M_IPFW3_NAT);
+		LIST_FOREACH_MUTABLE(a1, &nat->alias, next, tmp2) {
+			for (i = 0; i < ALIAS_RANGE; i++) {
+				s2 = a1->icmp_in[i];
+				if (s2 != NULL) {
+					if (time_uptime - s2->timestamp > sysctl_var_icmp_timeout) {
+						a1->icmp_in[i] = NULL;
+						kfree(s2, M_IPFW3_NAT);
+					}
+				}
+
 			}
 		}
+
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_tcp_out, tmp) {
 			if (time_uptime - s->timestamp > sysctl_var_tcp_timeout) {
 				RB_REMOVE(state_tree, &nat->rb_tcp_out, s);
 				kfree(s, M_IPFW3_NAT);
 			}
 		}
-		RB_FOREACH_SAFE(s, state_tree, &nat->rb_udp_in, tmp) {
-			if (time_uptime - s->timestamp > sysctl_var_udp_timeout) {
-				RB_REMOVE(state_tree, &nat->rb_udp_in, s);
-				kfree(s, M_IPFW3_NAT);
+		LIST_FOREACH_MUTABLE(a1, &nat->alias, next, tmp2) {
+			for (i = 0; i < ALIAS_RANGE; i++) {
+				s2 = a1->tcp_in[i];
+				if (s2 != NULL) {
+					if (time_uptime - s2->timestamp > sysctl_var_icmp_timeout) {
+						a1->tcp_in[i] = NULL;
+						kfree(s2, M_IPFW3_NAT);
+					}
+				}
+
 			}
 		}
 		RB_FOREACH_SAFE(s, state_tree, &nat->rb_udp_out, tmp) {
 			if (time_uptime - s->timestamp > sysctl_var_udp_timeout) {
 				RB_REMOVE(state_tree, &nat->rb_udp_out, s);
 				kfree(s, M_IPFW3_NAT);
+			}
+		}
+		LIST_FOREACH_MUTABLE(a1, &nat->alias, next, tmp2) {
+			for (i = 0; i < ALIAS_RANGE; i++) {
+				s2 = a1->udp_in[i];
+				if (s2 != NULL) {
+					if (time_uptime - s2->timestamp > sysctl_var_icmp_timeout) {
+						a1->udp_in[i] = NULL;
+						kfree(s2, M_IPFW3_NAT);
+					}
+				}
+
 			}
 		}
 	}

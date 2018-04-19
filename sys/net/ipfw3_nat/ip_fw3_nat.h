@@ -99,7 +99,11 @@ struct nat_state {
 
 struct nat_state2 {
 	uint32_t		src_addr;
+	uint32_t		dst_addr;
+	uint32_t		alias_addr;
 	uint16_t		src_port;
+	uint16_t		dst_port;
+	uint16_t		alias_port;
 	time_t			timestamp;
 };
 #define LEN_NAT_STATE2 sizeof(struct nat_state2)
@@ -113,11 +117,8 @@ struct cfg_nat {
 	int				count;
 	LIST_HEAD(, cfg_alias)		alias;	/* list of the alias IP */
 
-	struct state_tree	rb_tcp_in;
 	struct state_tree	rb_tcp_out;
-	struct state_tree	rb_udp_in;
 	struct state_tree	rb_udp_out;
-	struct state_tree	rb_icmp_in;
 	struct state_tree	rb_icmp_out;
 };
 
