@@ -459,29 +459,28 @@ extern ip_fw_ctl_t	*ip_fw_ctl_x_ptr;
 extern ip_fw_dn_io_t	*ip_fw_dn_io_ptr;
 
 
-#define IPFW_CFGCPUID	0
-#define IPFW_CFGPORT	netisr_cpuport(IPFW_CFGCPUID)
-#define IPFW_ASSERT_CFGPORT(msgport)				\
+#define	IPFW_TABLES_MAX		32
+#define	IPFW_USR_F_NORULE	0x01
+#define	IPFW_CFGCPUID		0
+#define	IPFW_CFGPORT		netisr_cpuport(IPFW_CFGCPUID)
+#define	IPFW_ASSERT_CFGPORT(msgport)				\
 	KASSERT((msgport) == IPFW_CFGPORT, ("not IPFW CFGPORT"))
 
-#define	IPFW_TABLES_MAX		32
 
 /* root of place holding all information, per-cpu */
 struct ipfw3_context {
-	struct ip_fw		*ipfw_rule_chain;	/* list of rules*/
-	struct ip_fw		*ipfw_default_rule;	/* default rule */
-	struct ipfw3_state_context 	*state_ctx;
-	struct ipfw_table_context 	*table_ctx;
-	uint16_t	state_hash_size;
-	uint32_t	ipfw_set_disable;
+	struct ip_fw			*ipfw_rule_chain;    /* rules*/
+	struct ip_fw			*ipfw_default_rule;  /* default rule*/
+	struct ipfw3_state_context	*state_ctx;
+	struct ipfw_table_context	*table_ctx;
+	uint32_t			ipfw_set_disable;
 };
 
-#define IPFW_USR_F_NORULE	0x01
 
 struct ipfw3_module{
-	int type;
-	int id;
-	char name[20];
+	int 	type;
+	int 	id;
+	char 	name[20];
 };
 
 
