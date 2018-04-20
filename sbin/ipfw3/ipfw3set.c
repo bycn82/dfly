@@ -156,6 +156,7 @@ set_move_set(int ac, char **av)
 {
 
 }
+
 /*
  * This one handles all set-related commands
  * 	ipfw set { show | enable | disable }
@@ -198,7 +199,8 @@ set_main(int ac, char **av)
 		i = do_set_x(IP_FW_DEL, masks, sizeof(u_int32_t));
 	} else if (!strncmp(*av, "toggle", strlen(*av))) {
 		set_toggle(ac, av);
-	} else
+	} else {
 		errx(EX_USAGE, "invalid set command %s\n", *av);
+	}
 }
 
