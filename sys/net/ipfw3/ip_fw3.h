@@ -373,6 +373,11 @@ typedef struct _ip_fw_x_header {
 #define IP_FW_GET		54   /* get entire firewall rule chain */
 #define IP_FW_RESETLOG		55   /* reset logging counters */
 
+#define IP_FW_STATE_ADD		56   /* add one state */
+#define IP_FW_STATE_DEL		57   /* delete states of one rulenum */
+#define IP_FW_STATE_FLUSH	58   /* flush all states */
+#define IP_FW_STATE_GET		59   /* get all states */
+
 #define IP_DUMMYNET_CONFIGURE	60   /* add/configure a dummynet pipe */
 #define IP_DUMMYNET_DEL		61   /* delete a dummynet pipe from chain */
 #define IP_DUMMYNET_FLUSH	62   /* flush dummynet */
@@ -385,11 +390,6 @@ typedef struct _ip_fw_x_header {
 #define IP_FW_NAT_FLUSH		70   /* get configuration of a nat rule */
 #define IP_FW_NAT_GET		71   /* get config of a nat rule */
 #define IP_FW_NAT_GET_RECORD	72   /* get nat record of a nat rule */
-
-#define IP_FW_STATE_ADD		56   /* add one state */
-#define IP_FW_STATE_DEL		57   /* delete states of one rulenum */
-#define IP_FW_STATE_FLUSH	58   /* flush all states */
-#define IP_FW_STATE_GET		59   /* get all states */
 
 #define IP_FW_TABLE_CREATE	73	/* table_create 	*/
 #define IP_FW_TABLE_DELETE	74	/* table_delete 	*/
@@ -417,7 +417,11 @@ typedef struct _ip_fw_x_header {
 #define IP_FW_SYNC_CENTRE_TEST	92	/* test sync centre */
 #define IP_FW_SYNC_CENTRE_CLEAR	93	/* stop and clear the centre */
 
-
+#define IP_FW_SET_GET		95	/* get the set config */
+#define IP_FW_SET_MOVE_RULE	96	/* move a rule to set */
+#define IP_FW_SET_MOVE_SET	97	/* move all rules from set a to b */
+#define IP_FW_SET_SWAP		98	/* swap 2 sets	*/
+#define IP_FW_SET_TOGGLE	98	/* enable/disable a set	*/
 
 #endif /* _IPFW2_H */
 #ifdef _KERNEL

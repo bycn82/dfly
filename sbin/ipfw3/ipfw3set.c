@@ -78,7 +78,84 @@
 #include "ipfw3.h"
 #include "ipfw3set.h"
 
+void
+set_toggle(int ac, char **av)
+{
 
+}
+
+void
+set_show(int ac, char **av)
+{
+	u_int32_t set_disable;
+	int i, nbytes;
+
+	void *data = NULL;
+	char *msg;
+	int nalloc=1000;
+	nbytes = nalloc;
+
+	while (nbytes >= nalloc) {
+		nalloc = nalloc * 2+321;
+		nbytes = nalloc;
+		if (data == NULL) {
+			if ((data = malloc(nbytes)) == NULL) {
+				err(EX_OSERR, "malloc");
+			}
+		} else if ((data = realloc(data, nbytes)) == NULL) {
+			err(EX_OSERR, "realloc");
+		}
+		if (do_get_x(IP_FW_GET, data, &nbytes) < 0) {
+			err(EX_OSERR, "getsockopt(IP_FW_GET)");
+		}
+	}
+	set_disable = ((struct ipfw_ioc_rule *)data)->set_disable;
+	for (i = 0, msg = "disable" ; i < 31; i++)
+		if ( (set_disable & (1<<i))) {
+			printf("%s %d", msg, i);
+			msg = "";
+		}
+	msg = (set_disable) ? " enable" : "enable";
+	for (i = 0; i < 31; i++)
+		if ( !(set_disable & (1<<i))) {
+			printf("%s %d", msg, i);
+			msg = "";
+		}
+	printf("\n");
+}
+
+void
+set_swap(int ac, char **av)
+{
+	u_int32_t masks[2];
+	u_int16_t rulenum;
+	u_int8_t new_set;
+	int i;
+
+	NEXT_ARG;
+	if (ac != 2)
+		errx(EX_USAGE, "set swap needs 2 set numbers\n");
+	rulenum = atoi(av[0]);
+	new_set = atoi(av[1]);
+	if (!isdigit(*(av[0])) || rulenum > 30)
+		errx(EX_DATAERR, "invalid set number %s\n", av[0]);
+	if (!isdigit(*(av[1])) || new_set > 30)
+		errx(EX_DATAERR, "invalid set number %s\n", av[1]);
+	masks[0] = (4 << 24) | (new_set << 16) | (rulenum);
+	i = do_set_x(IP_FW_DEL, masks, sizeof(u_int32_t));
+}
+
+void
+set_move_rule(int ac, char **av)
+{
+
+}
+
+void
+set_move_set(int ac, char **av)
+{
+
+}
 /*
  * This one handles all set-related commands
  * 	ipfw set { show | enable | disable }
@@ -89,59 +166,18 @@
 void
 set_main(int ac, char **av)
 {
-	u_int32_t set_disable, masks[2];
+	u_int32_t masks[2];
 	u_int16_t rulenum;
 	u_int8_t cmd, new_set;
-	int i, nbytes;
+	int i;
 
 	NEXT_ARG;
 	if (!ac)
 		errx(EX_USAGE, "set needs command");
 	if (!strncmp(*av, "show", strlen(*av)) ) {
-		void *data = NULL;
-		char *msg;
-		int nalloc=1000;
-		nbytes = nalloc;
-
-		while (nbytes >= nalloc) {
-			nalloc = nalloc * 2+321;
-			nbytes = nalloc;
-			if (data == NULL) {
-				if ((data = malloc(nbytes)) == NULL) {
-					err(EX_OSERR, "malloc");
-				}
-			} else if ((data = realloc(data, nbytes)) == NULL) {
-				err(EX_OSERR, "realloc");
-			}
-			if (do_get_x(IP_FW_GET, data, &nbytes) < 0) {
-				err(EX_OSERR, "getsockopt(IP_FW_GET)");
-			}
-		}
-		set_disable = ((struct ipfw_ioc_rule *)data)->set_disable;
-		for (i = 0, msg = "disable" ; i < 31; i++)
-			if ( (set_disable & (1<<i))) {
-				printf("%s %d", msg, i);
-				msg = "";
-			}
-		msg = (set_disable) ? " enable" : "enable";
-		for (i = 0; i < 31; i++)
-			if ( !(set_disable & (1<<i))) {
-				printf("%s %d", msg, i);
-				msg = "";
-			}
-		printf("\n");
+		set_show(ac, av);
 	} else if (!strncmp(*av, "swap", strlen(*av))) {
-		NEXT_ARG;
-		if (ac != 2)
-			errx(EX_USAGE, "set swap needs 2 set numbers\n");
-		rulenum = atoi(av[0]);
-		new_set = atoi(av[1]);
-		if (!isdigit(*(av[0])) || rulenum > 30)
-			errx(EX_DATAERR, "invalid set number %s\n", av[0]);
-		if (!isdigit(*(av[1])) || new_set > 30)
-			errx(EX_DATAERR, "invalid set number %s\n", av[1]);
-		masks[0] = (4 << 24) | (new_set << 16) | (rulenum);
-		i = do_set_x(IP_FW_DEL, masks, sizeof(u_int32_t));
+		set_swap(ac, av);
 	} else if (!strncmp(*av, "move", strlen(*av))) {
 		NEXT_ARG;
 		if (ac && !strncmp(*av, "rule", strlen(*av))) {
@@ -160,32 +196,8 @@ set_main(int ac, char **av)
 			errx(EX_DATAERR, "invalid dest. set %s\n", av[1]);
 		masks[0] = (cmd << 24) | (new_set << 16) | (rulenum);
 		i = do_set_x(IP_FW_DEL, masks, sizeof(u_int32_t));
-	} else if (!strncmp(*av, "disable", strlen(*av)) ||
-			!strncmp(*av, "enable", strlen(*av)) ) {
-		int which = !strncmp(*av, "enable", strlen(*av)) ? 1 : 0;
-
-		NEXT_ARG;
-		masks[0] = masks[1] = 0;
-
-		while (ac) {
-			if (isdigit(**av)) {
-				i = atoi(*av);
-				if (i < 0 || i > 30)
-					errx(EX_DATAERR, "invalid set number %d\n", i);
-				masks[which] |= (1<<i);
-			} else if (!strncmp(*av, "disable", strlen(*av)))
-				which = 0;
-			else if (!strncmp(*av, "enable", strlen(*av)))
-				which = 1;
-			else
-				errx(EX_DATAERR, "invalid set command %s\n", *av);
-			NEXT_ARG;
-		}
-		if ( (masks[0] & masks[1]) != 0 )
-			errx(EX_DATAERR, "cannot enable and disable the same set\n");
-		i = do_set_x(IP_FW_DEL, masks, sizeof(masks));
-		if (i)
-			warn("set enable/disable: setsockopt(IP_FW_DEL)");
+	} else if (!strncmp(*av, "toggle", strlen(*av))) {
+		set_toggle(ac, av);
 	} else
 		errx(EX_USAGE, "invalid set command %s\n", *av);
 }

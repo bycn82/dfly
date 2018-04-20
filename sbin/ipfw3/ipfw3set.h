@@ -35,5 +35,12 @@
 #ifndef _IPFW3SET_H_
 #define _IPFW3SET_H_
 
+void	set_enable(int ac, char **av);
+void	set_disable(int ac, char **av);
+void	set_show(int ac, char **av);
+void	set_swap(int ac, char **av);
+void	set_move_rule(int ac, char **av);
+
 void	set_main(int ac, char **av);
+
 #endif
