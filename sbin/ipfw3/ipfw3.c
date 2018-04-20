@@ -336,7 +336,7 @@ help(void)
 
 
 void
-delete_rules(int ac, char *av[])
+rule_delete(int ac, char *av[])
 {
 	struct dn_ioc_pipe pipe;
 	u_int32_t rulenum;
@@ -1086,7 +1086,7 @@ ipfw3_main(int ac, char **av)
 		module_load();
 		rule_add(ac, av);
 	} else if (!strncmp(*av, "delete", strlen(*av))) {
-		delete_rules(ac, av);
+		rule_delete(ac, av);
 	} else if (!strncmp(*av, "flush", strlen(*av))) {
 		rule_flush();
 	} else if (!strncmp(*av, "list", strlen(*av))) {

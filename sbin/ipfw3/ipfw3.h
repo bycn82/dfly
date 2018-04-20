@@ -138,7 +138,7 @@ void	prev_show_chk(ipfw_insn *cmd, uint8_t *prev_module,
 			uint8_t *prev_opcode, int *show_or);
 int	show_filter(ipfw_insn *cmd, char *word, int type);
 void	help(void);
-void	delete_rules(int ac, char **av);
+void	rule_delete(int ac, char **av);
 void	rule_list(int ac, char **av);
 void	rule_add(int ac, char **av);
 void	rule_zero(int ac, char **av);
