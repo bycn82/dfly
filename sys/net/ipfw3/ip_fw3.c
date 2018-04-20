@@ -1140,7 +1140,7 @@ ip_fw3_ctl_alter(uint32_t arg)
  * Clear counters for a specific rule.
  */
 void
-clear_counters(struct ip_fw *rule)
+ip_fw3_clear_counters(struct ip_fw *rule)
 {
 	rule->bcnt = rule->pcnt = 0;
 	rule->timestamp = 0;
@@ -1155,16 +1155,16 @@ ip_fw3_zero_entry_dispatch(netmsg_t nmsg)
 
 	if (zmsg->rulenum == 0) {
 		for (rule = ctx->ipfw_rule_chain; rule; rule = rule->next) {
-			clear_counters(rule);
+			ip_fw3_clear_counters(rule);
 		}
 	} else {
 		for (rule = ctx->ipfw_rule_chain; rule; rule = rule->next) {
 			if (rule->rulenum == zmsg->rulenum) {
-				clear_counters(rule);
+				ip_fw3_clear_counters(rule);
 			}
 		}
 	}
-	clear_counters(ctx->ipfw_default_rule);
+	ip_fw3_clear_counters(ctx->ipfw_default_rule);
 	netisr_forwardmsg_all(&nmsg->base, mycpuid + 1);
 }
 

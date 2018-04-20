@@ -546,7 +546,7 @@ int	ip_fw3_alt_move_ruleset(uint8_t from_set, uint8_t to_set);
 void	ip_fw3_alt_swap_ruleset_dispatch(netmsg_t nmsg);
 int	ip_fw3_alt_swap_ruleset(uint8_t set1, uint8_t set2);
 int	ip_fw3_ctl_alter(uint32_t arg);
-void	clear_counters(struct ip_fw *rule);
+void	ip_fw3_clear_counters(struct ip_fw *rule);
 void	ip_fw3_zero_entry_dispatch(netmsg_t nmsg);
 int	ip_fw3_ctl_zero_entry(int rulenum, int log_only);
 int	ip_fw3_ctl_add_rule(struct sockopt *sopt);
